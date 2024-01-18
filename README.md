@@ -1,3 +1,3 @@
 # chocopy-rs
 
-Rust implementation of the [https://chocopy.org/](ChocoPy) language.
+Rust implementation of the [ChocoPy](https://chocopy.org/) language.
