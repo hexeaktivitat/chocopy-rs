@@ -1,12 +1,14 @@
 use std::env::args;
 use std::fs::{read, File};
 
+use miette::Result;
+
 use lexer::Lexer;
 
 mod lexer;
 mod token;
 
-fn main() {
+fn main() -> Result<()> {
     let args: Vec<String> = args().collect();
     let source_file = &args[1];
     let code = read(source_file).unwrap();
@@ -18,4 +20,6 @@ fn main() {
     for r in result.unwrap() {
         println!("{}", r);
     }
+
+    Ok(())
 }

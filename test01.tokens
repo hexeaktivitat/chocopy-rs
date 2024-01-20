@@ -1,63 +1,63 @@
 KEYWORD def: SourceSpan { offset: SourceOffset(0), length: 3 }
-IDENTIFIER is_zero: SourceSpan { offset: SourceOffset(4), length: 11 }
-CTRL (: SourceSpan { offset: SourceOffset(11), length: 12 }
-IDENTIFIER items: SourceSpan { offset: SourceOffset(12), length: 17 }
-CTRL :: SourceSpan { offset: SourceOffset(17), length: 18 }
-CTRL [: SourceSpan { offset: SourceOffset(19), length: 20 }
-IDENTIFIER int: SourceSpan { offset: SourceOffset(20), length: 23 }
-CTRL ]: SourceSpan { offset: SourceOffset(23), length: 24 }
-CTRL ,: SourceSpan { offset: SourceOffset(24), length: 25 }
-IDENTIFIER idx: SourceSpan { offset: SourceOffset(26), length: 29 }
-CTRL :: SourceSpan { offset: SourceOffset(29), length: 30 }
-IDENTIFIER int: SourceSpan { offset: SourceOffset(31), length: 34 }
-CTRL ): SourceSpan { offset: SourceOffset(34), length: 35 }
-CTRL ->: SourceSpan { offset: SourceOffset(36), length: 38 }
-IDENTIFIER bool: SourceSpan { offset: SourceOffset(39), length: 43 }
-CTRL :: SourceSpan { offset: SourceOffset(43), length: 44 }
-INDENT 4: SourceSpan { offset: SourceOffset(44), length: 49 }
-IDENTIFIER val: SourceSpan { offset: SourceOffset(49), length: 52 }
-CTRL :: SourceSpan { offset: SourceOffset(52), length: 53 }
-IDENTIFIER int: SourceSpan { offset: SourceOffset(53), length: 56 }
-OP EQUALS: SourceSpan { offset: SourceOffset(57), length: 58 }
-VALUE NUM: 0: SourceSpan { offset: SourceOffset(59), length: 60 }
-IDENTIFIER val: SourceSpan { offset: SourceOffset(95), length: 98 }
-OP EQUALS: SourceSpan { offset: SourceOffset(99), length: 100 }
-IDENTIFIER items: SourceSpan { offset: SourceOffset(101), length: 106 }
-CTRL [: SourceSpan { offset: SourceOffset(106), length: 107 }
-IDENTIFIER idx: SourceSpan { offset: SourceOffset(107), length: 110 }
-CTRL ]: SourceSpan { offset: SourceOffset(110), length: 111 }
-NEWLINE: SourceSpan { offset: SourceOffset(111), length: 116 }
-KEYWORD return: SourceSpan { offset: SourceOffset(116), length: 122 }
-IDENTIFIER val: SourceSpan { offset: SourceOffset(123), length: 126 }
-OP EQUAL EQUALS: SourceSpan { offset: SourceOffset(127), length: 129 }
-VALUE NUM: 0: SourceSpan { offset: SourceOffset(130), length: 131 }
-DEDENT 0: SourceSpan { offset: SourceOffset(131), length: 132 }
-NEWLINE: SourceSpan { offset: SourceOffset(132), length: 133 }
-IDENTIFIER mylist: SourceSpan { offset: SourceOffset(133), length: 139 }
-CTRL :: SourceSpan { offset: SourceOffset(139), length: 140 }
-CTRL [: SourceSpan { offset: SourceOffset(141), length: 142 }
-IDENTIFIER int: SourceSpan { offset: SourceOffset(142), length: 145 }
-CTRL ]: SourceSpan { offset: SourceOffset(145), length: 146 }
-OP EQUALS: SourceSpan { offset: SourceOffset(147), length: 148 }
-KEYWORD None: SourceSpan { offset: SourceOffset(149), length: 153 }
-NEWLINE: SourceSpan { offset: SourceOffset(153), length: 154 }
-IDENTIFIER mylist: SourceSpan { offset: SourceOffset(154), length: 160 }
-OP EQUALS: SourceSpan { offset: SourceOffset(161), length: 162 }
-CTRL [: SourceSpan { offset: SourceOffset(163), length: 164 }
-VALUE NUM: 1: SourceSpan { offset: SourceOffset(164), length: 165 }
-CTRL ,: SourceSpan { offset: SourceOffset(165), length: 166 }
-VALUE NUM: 0: SourceSpan { offset: SourceOffset(166), length: 167 }
-CTRL ,: SourceSpan { offset: SourceOffset(167), length: 168 }
-VALUE NUM: 1: SourceSpan { offset: SourceOffset(168), length: 169 }
-CTRL ]: SourceSpan { offset: SourceOffset(169), length: 170 }
-NEWLINE: SourceSpan { offset: SourceOffset(170), length: 171 }
-IDENTIFIER print: SourceSpan { offset: SourceOffset(171), length: 176 }
-CTRL (: SourceSpan { offset: SourceOffset(176), length: 177 }
-IDENTIFIER is_zero: SourceSpan { offset: SourceOffset(177), length: 184 }
-CTRL (: SourceSpan { offset: SourceOffset(184), length: 185 }
-IDENTIFIER mylist: SourceSpan { offset: SourceOffset(185), length: 191 }
-CTRL ,: SourceSpan { offset: SourceOffset(191), length: 192 }
-VALUE NUM: 1: SourceSpan { offset: SourceOffset(193), length: 194 }
-CTRL ): SourceSpan { offset: SourceOffset(194), length: 195 }
-CTRL ): SourceSpan { offset: SourceOffset(195), length: 196 }
+IDENTIFIER is_zero: SourceSpan { offset: SourceOffset(4), length: 7 }
+CTRL (: SourceSpan { offset: SourceOffset(11), length: 1 }
+IDENTIFIER items: SourceSpan { offset: SourceOffset(12), length: 5 }
+CTRL :: SourceSpan { offset: SourceOffset(17), length: 1 }
+CTRL [: SourceSpan { offset: SourceOffset(19), length: 1 }
+IDENTIFIER int: SourceSpan { offset: SourceOffset(20), length: 3 }
+CTRL ]: SourceSpan { offset: SourceOffset(23), length: 1 }
+CTRL ,: SourceSpan { offset: SourceOffset(24), length: 1 }
+IDENTIFIER idx: SourceSpan { offset: SourceOffset(26), length: 3 }
+CTRL :: SourceSpan { offset: SourceOffset(29), length: 1 }
+IDENTIFIER int: SourceSpan { offset: SourceOffset(31), length: 3 }
+CTRL ): SourceSpan { offset: SourceOffset(34), length: 1 }
+CTRL ->: SourceSpan { offset: SourceOffset(36), length: 2 }
+IDENTIFIER bool: SourceSpan { offset: SourceOffset(39), length: 4 }
+CTRL :: SourceSpan { offset: SourceOffset(43), length: 1 }
+INDENT 4: SourceSpan { offset: SourceOffset(44), length: 5 }
+IDENTIFIER val: SourceSpan { offset: SourceOffset(49), length: 3 }
+CTRL :: SourceSpan { offset: SourceOffset(52), length: 1 }
+IDENTIFIER int: SourceSpan { offset: SourceOffset(53), length: 3 }
+OP EQUALS: SourceSpan { offset: SourceOffset(57), length: 1 }
+VALUE NUM: 0: SourceSpan { offset: SourceOffset(59), length: 1 }
+IDENTIFIER val: SourceSpan { offset: SourceOffset(95), length: 3 }
+OP EQUALS: SourceSpan { offset: SourceOffset(99), length: 1 }
+IDENTIFIER items: SourceSpan { offset: SourceOffset(101), length: 5 }
+CTRL [: SourceSpan { offset: SourceOffset(106), length: 1 }
+IDENTIFIER idx: SourceSpan { offset: SourceOffset(107), length: 3 }
+CTRL ]: SourceSpan { offset: SourceOffset(110), length: 1 }
+NEWLINE: SourceSpan { offset: SourceOffset(111), length: 5 }
+KEYWORD return: SourceSpan { offset: SourceOffset(116), length: 6 }
+IDENTIFIER val: SourceSpan { offset: SourceOffset(123), length: 3 }
+OP EQUAL EQUALS: SourceSpan { offset: SourceOffset(127), length: 2 }
+VALUE NUM: 0: SourceSpan { offset: SourceOffset(130), length: 1 }
+DEDENT 0: SourceSpan { offset: SourceOffset(131), length: 1 }
+NEWLINE: SourceSpan { offset: SourceOffset(132), length: 1 }
+IDENTIFIER mylist: SourceSpan { offset: SourceOffset(133), length: 6 }
+CTRL :: SourceSpan { offset: SourceOffset(139), length: 1 }
+CTRL [: SourceSpan { offset: SourceOffset(141), length: 1 }
+IDENTIFIER int: SourceSpan { offset: SourceOffset(142), length: 3 }
+CTRL ]: SourceSpan { offset: SourceOffset(145), length: 1 }
+OP EQUALS: SourceSpan { offset: SourceOffset(147), length: 1 }
+KEYWORD None: SourceSpan { offset: SourceOffset(149), length: 4 }
+NEWLINE: SourceSpan { offset: SourceOffset(153), length: 1 }
+IDENTIFIER mylist: SourceSpan { offset: SourceOffset(154), length: 6 }
+OP EQUALS: SourceSpan { offset: SourceOffset(161), length: 1 }
+CTRL [: SourceSpan { offset: SourceOffset(163), length: 1 }
+VALUE NUM: 1: SourceSpan { offset: SourceOffset(164), length: 1 }
+CTRL ,: SourceSpan { offset: SourceOffset(165), length: 1 }
+VALUE NUM: 0: SourceSpan { offset: SourceOffset(166), length: 1 }
+CTRL ,: SourceSpan { offset: SourceOffset(167), length: 1 }
+VALUE NUM: 1: SourceSpan { offset: SourceOffset(168), length: 1 }
+CTRL ]: SourceSpan { offset: SourceOffset(169), length: 1 }
+NEWLINE: SourceSpan { offset: SourceOffset(170), length: 1 }
+IDENTIFIER print: SourceSpan { offset: SourceOffset(171), length: 5 }
+CTRL (: SourceSpan { offset: SourceOffset(176), length: 1 }
+IDENTIFIER is_zero: SourceSpan { offset: SourceOffset(177), length: 7 }
+CTRL (: SourceSpan { offset: SourceOffset(184), length: 1 }
+IDENTIFIER mylist: SourceSpan { offset: SourceOffset(185), length: 6 }
+CTRL ,: SourceSpan { offset: SourceOffset(191), length: 1 }
+VALUE NUM: 1: SourceSpan { offset: SourceOffset(193), length: 1 }
+CTRL ): SourceSpan { offset: SourceOffset(194), length: 1 }
+CTRL ): SourceSpan { offset: SourceOffset(195), length: 1 }
 END OF FILE: SourceSpan { offset: SourceOffset(197), length: 213 }

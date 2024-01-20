@@ -4,13 +4,31 @@ use thiserror::Error;
 use crate::token::*;
 
 #[derive(Error, Debug, Diagnostic)]
-#[error("oops!")]
-#[diagnostic(code(oops::my::bad), url(docsrs), help("do it better next time"))]
-pub struct LexError {
-    #[source_code]
-    src: String,
-    span: SourceSpan,
-    msg: String,
+pub enum LexError {
+    #[error("Syntax error: Invalid character")]
+    #[diagnostic(code(syntax::invalid_character))]
+    InvalidCharacter {
+        #[help]
+        advice: String,
+        #[label("char")]
+        bad_char: SourceSpan,
+    },
+    #[error("Syntax error: Unterminated string")]
+    #[diagnostic(code(syntax::unterminated_string))]
+    UnterminatedString {
+        #[help]
+        advice: String,
+        #[label("starting quote")]
+        start_quote: SourceSpan,
+    },
+    #[error("Syntax error: Not a valid number")]
+    #[diagnostic(code(syntax::not_a_number))]
+    NotANumber {
+        #[help]
+        advice: String,
+        #[label("Invalid number")]
+        bad_num: SourceSpan,
+    },
 }
 
 pub struct Lexer<'a> {
@@ -20,6 +38,8 @@ pub struct Lexer<'a> {
     start: usize,
     current: usize,
     line: usize,
+    line_start: usize,
+    lines_of_code: Vec<String>,
     indent: Vec<usize>,
 }
 
@@ -31,7 +51,9 @@ impl<'a> Lexer<'a> {
             // syntax_errors: Vec::new(),
             start: 0,
             current: 0,
-            line: 1,
+            line: 0,
+            line_start: 0,
+            lines_of_code: vec![],
             indent: vec![0],
         }
     }
@@ -60,6 +82,14 @@ impl<'a> Lexer<'a> {
             Ok(tokens)
         } else {
             Err(errors)
+        }
+    }
+
+    pub fn get_line(&self, line: usize) -> Result<String, Box<dyn std::error::Error>> {
+        if line < self.lines_of_code.len() {
+            Err("inaccurate line number passed".into())
+        } else {
+            Ok(self.lines_of_code[line].clone())
         }
     }
 
@@ -124,11 +154,9 @@ impl<'a> Lexer<'a> {
                 if self.match_next(b'/') {
                     Ok(Some(TokenType::Operator(Op::Divide)))
                 } else {
-                    Err(LexError {
-                        src: String::from_utf8(self.source[self.start..self.current].to_owned())
-                            .unwrap(),
-                        span: (self.start, self.current).into(),
-                        msg: "Syntax error: '/'".into(),
+                    Err(LexError::InvalidCharacter {
+                        advice: "this character is invalid in this context".into(),
+                        bad_char: (self.start, self.current - self.start).into(),
                     })
                 }
             }
@@ -182,17 +210,16 @@ impl<'a> Lexer<'a> {
             }
 
             // good enough general error handling for now
-            _ => Err(LexError {
-                src: String::from_utf8(self.source[self.start..self.current].to_owned()).unwrap(),
-                span: (self.start, self.current).into(),
-                msg: "Syntax error: unknown character".into(),
+            _ => Err(LexError::InvalidCharacter {
+                advice: "this character is unknown to the grammar".into(),
+                bad_char: (self.start, self.current - self.start).into(),
             }),
         }
     }
 
     fn make_token(&self, token_type: TokenType) -> Result<Token, LexError> {
         let line = self.line;
-        let lexeme = (self.start, self.current).into();
+        let lexeme = (self.start, self.current - self.start).into();
         Ok(Token::new(token_type, lexeme))
     }
 
@@ -235,10 +262,9 @@ impl<'a> Lexer<'a> {
             self.advance();
         }
         if self.end_of_code() {
-            return Err(LexError {
-                src: String::from_utf8(self.source[self.start..self.current].to_owned()).unwrap(),
-                span: (self.start, self.current).into(),
-                msg: "Syntax error: unterminated string".into(),
+            return Err(LexError::UnterminatedString {
+                advice: "check for a missing quote around intended string".into(),
+                start_quote: (self.start, self.current - self.start).into(),
             });
         }
 
@@ -250,10 +276,11 @@ impl<'a> Lexer<'a> {
     }
 
     fn substring(&self, start: usize, end: usize) -> Result<String, LexError> {
-        String::from_utf8(self.source[start..end].to_vec()).map_err(|_source| LexError {
-            src: String::from_utf8(self.source[start..end].to_owned()).unwrap(),
-            span: (self.start, self.current).into(),
-            msg: "Syntax error: invalid character in string".into(),
+        String::from_utf8(self.source[start..end].to_vec()).map_err(|_source| {
+            LexError::InvalidCharacter {
+                advice: "character unrecognized in this context".into(),
+                bad_char: (self.start, self.current - self.start).into(),
+            }
         })
     }
 
@@ -263,16 +290,14 @@ impl<'a> Lexer<'a> {
         }
 
         if self.end_of_code() {
-            return Err(LexError {
-                src: String::from_utf8(self.source[self.start..self.current].to_owned()).unwrap(),
-                span: (self.start, self.current).into(),
-                msg: "Unexpected character: not a number".into(),
+            return Err(LexError::NotANumber {
+                advice: "not a valid integer value".into(),
+                bad_num: (self.start, self.current - self.start).into(),
             });
         } else if self.peek() == b'.' {
-            return Err(LexError {
-                src: String::from_utf8(self.source[self.start..self.current].to_owned()).unwrap(),
-                span: (self.start, self.current).into(),
-                msg: "Invalid integer: floats not supported".into(),
+            return Err(LexError::InvalidCharacter {
+                advice: "chocopy-rs does not support float values".into(),
+                bad_char: (self.start, self.current - self.start).into(),
             });
         }
 
