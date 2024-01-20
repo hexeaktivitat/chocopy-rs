@@ -63,11 +63,12 @@ impl std::fmt::Display for Op {
 
 pub enum TokenType {
     Keyword(String),
-    Ctrl(char),
+    Ctrl(String),
     Operator(Op),
     Value(Literal),
     Indent(usize),
     Dedent(usize),
+    Identifier(String),
 }
 
 impl std::fmt::Display for TokenType {
@@ -79,6 +80,7 @@ impl std::fmt::Display for TokenType {
             TokenType::Keyword(k) => f.write_fmt(format_args!("KEYWORD {}", k)),
             TokenType::Indent(i) => f.write_fmt(format_args!("INDENT {}", i)),
             TokenType::Dedent(d) => f.write_fmt(format_args!("DEDENT {}", d)),
+            TokenType::Identifier(i) => f.write_fmt(format_args!("IDENTIFIER {}", i)),
         }
     }
 }

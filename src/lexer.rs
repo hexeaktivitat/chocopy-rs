@@ -46,16 +46,17 @@ impl<'a> Lexer<'a> {
         match self.advance() {
             // single characters to start with
             // control characters
-            b'(' => Ok(Some(TokenType::Ctrl('('))),
-            b')' => Ok(Some(TokenType::Ctrl(')'))),
-            b'{' => Ok(Some(TokenType::Ctrl('{'))),
-            b'}' => Ok(Some(TokenType::Ctrl('}'))),
-            b'[' => Ok(Some(TokenType::Ctrl('['))),
-            b']' => Ok(Some(TokenType::Ctrl(']'))),
-            b':' => Ok(Some(TokenType::Ctrl(':'))),
-            b',' => Ok(Some(TokenType::Ctrl(','))),
-            b'.' => Ok(Some(TokenType::Ctrl('.'))),
-            b'#' => Ok(Some(TokenType::Ctrl('#'))),
+            b'(' => Ok(Some(TokenType::Ctrl("(".into()))),
+            b')' => Ok(Some(TokenType::Ctrl(")".into()))),
+            b'{' => Ok(Some(TokenType::Ctrl("{".into()))),
+            b'}' => Ok(Some(TokenType::Ctrl("}".into()))),
+            b'[' => Ok(Some(TokenType::Ctrl("[".into()))),
+            b']' => Ok(Some(TokenType::Ctrl("]".into()))),
+            b':' => Ok(Some(TokenType::Ctrl(":".into()))),
+            b',' => Ok(Some(TokenType::Ctrl(",".into()))),
+            b'.' => Ok(Some(TokenType::Ctrl(".".into()))),
+            b'#' => Ok(Some(TokenType::Ctrl("#".into()))),
+
             // significant whitespace
             // space handling for indent / dedent may be better to do in a different place
             // b' ' => Ok(Some(TokenType::Indent(self.indent + 1))),
@@ -78,13 +79,13 @@ impl<'a> Lexer<'a> {
                     }
                     Ok(Some(TokenType::Dedent(indentation)))
                 } else {
-                    Ok(Some(TokenType::Ctrl('\n')))
+                    Ok(Some(TokenType::Ctrl("\n".into())))
                 }
             }
             // b'\t' => Ok(Some(TokenType::Ctrl('\t'))),
+
             // operators
             b'+' => Ok(Some(TokenType::Operator(Op::Add))),
-            b'-' => Ok(Some(TokenType::Operator(Op::Subtract))),
             b'*' => Ok(Some(TokenType::Operator(Op::Multiply))),
             b'%' => Ok(Some(TokenType::Operator(Op::Remainder))),
 
@@ -101,6 +102,14 @@ impl<'a> Lexer<'a> {
                     })
                 }
             }
+            b'-' => {
+                if self.match_next(b'>') {
+                    Ok(Some(TokenType::Ctrl("->".into())))
+                } else {
+                    Ok(Some(TokenType::Operator(Op::Subtract)))
+                }
+            }
+
             b'=' => Ok(Some(if self.match_next(b'=') {
                 TokenType::Operator(Op::EqualEquals)
             } else {
@@ -121,6 +130,27 @@ impl<'a> Lexer<'a> {
             } else {
                 TokenType::Operator(Op::LesserThan)
             })),
+
+            // string literals
+            b'"' => self.string().map(Some),
+            // numeric literals
+            c if c.is_ascii_digit() => self.number().map(Some),
+
+            // keywords & identifiers
+            c @ b'_' | c if c.is_ascii_alphabetic() => {
+                self.identifier().map(|x| match x.as_str() {
+                    // keywords first
+                    "False" | "True" | "None" | "and" | "as" | "assert" | "async" | "await"
+                    | "break" | "class" | "continue" | "def" | "del" | "elif" | "else"
+                    | "except" | "finally" | "for" | "from" | "global" | "if" | "import" | "in"
+                    | "is" | "lambda" | "nonlocal" | "not" | "or" | "pass" | "raise" | "return"
+                    | "try" | "while" | "with" | "yield" => Some(TokenType::Keyword(x)),
+
+                    // identifier for function or variable
+                    _ => Some(TokenType::Identifier(x)),
+                })
+            }
+
             // good enough general error handling for now
             _ => Err(LexError {
                 src: String::from_utf8(self.source[self.start..self.current].to_owned()).unwrap(),
@@ -158,5 +188,69 @@ impl<'a> Lexer<'a> {
             self.current += 1;
             true
         }
+    }
+
+    fn string(&mut self) -> Result<TokenType, LexError> {
+        while self.peek() != b'"' && !self.end_of_code() {
+            if self.peek() == b'\n' {
+                self.line += 1;
+            }
+            self.advance();
+        }
+        if self.end_of_code() {
+            return Err(LexError {
+                src: String::from_utf8(self.source[self.start..self.current].to_owned()).unwrap(),
+                span: (self.start, self.current).into(),
+                msg: "Syntax error: unterminated string".into(),
+            });
+        }
+
+        self.advance();
+
+        Ok(TokenType::Value(Literal::Str(
+            self.substring(self.start + 1, self.current - 1)?,
+        )))
+    }
+
+    fn substring(&self, start: usize, end: usize) -> Result<String, LexError> {
+        String::from_utf8(self.source[start..end].to_vec()).map_err(|_source| LexError {
+            src: String::from_utf8(self.source[start..end].to_owned()).unwrap(),
+            span: (self.start, self.current).into(),
+            msg: "Syntax error: invalid character in string".into(),
+        })
+    }
+
+    fn number(&mut self) -> Result<TokenType, LexError> {
+        while self.peek().is_ascii_digit() && !self.end_of_code() && self.peek() != b'.' {
+            self.advance();
+        }
+
+        if self.end_of_code() {
+            return Err(LexError {
+                src: String::from_utf8(self.source[self.start..self.current].to_owned()).unwrap(),
+                span: (self.start, self.current).into(),
+                msg: "Unexpected character: not a number".into(),
+            });
+        } else if self.peek() == b'.' {
+            return Err(LexError {
+                src: String::from_utf8(self.source[self.start..self.current].to_owned()).unwrap(),
+                span: (self.start, self.current).into(),
+                msg: "Invalid integer: floats not supported".into(),
+            });
+        }
+
+        Ok(TokenType::Value(Literal::Num(
+            self.substring(self.start, self.current)?
+                .parse::<i32>()
+                .expect("that was not an i32? how"),
+        )))
+    }
+
+    fn identifier(&mut self) -> Result<String, LexError> {
+        while self.peek().is_ascii_alphabetic() {
+            self.advance();
+        }
+
+        self.substring(self.start, self.current)
     }
 }
