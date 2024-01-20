@@ -1,5 +1,3 @@
-use std::num::Saturating;
-
 use miette::{Diagnostic, NamedSource, SourceSpan};
 use thiserror::Error;
 
@@ -8,16 +6,16 @@ use crate::token::*;
 #[derive(Error, Debug, Diagnostic)]
 #[error("oops!")]
 #[diagnostic(code(oops::my::bad), url(docsrs), help("do it better next time"))]
-struct LexError {
+pub struct LexError {
     #[source_code]
     src: String,
     span: SourceSpan,
     msg: String,
 }
 
-struct Lexer<'a> {
+pub struct Lexer<'a> {
     source: &'a [u8],
-    tokens: Vec<Token>,
+    // tokens: Vec<Token>,
     // syntax_errors: Vec<Error>,
     start: usize,
     current: usize,
@@ -29,12 +27,39 @@ impl<'a> Lexer<'a> {
     pub fn new(source: &'a [u8]) -> Self {
         Self {
             source,
-            tokens: Vec::new(),
+            // tokens: Vec::new(),
             // syntax_errors: Vec::new(),
             start: 0,
             current: 0,
             line: 1,
             indent: vec![0],
+        }
+    }
+
+    pub fn lex_code(&mut self) -> Result<Vec<Token>, Vec<LexError>> {
+        let mut tokens = Vec::new();
+        let mut errors = Vec::new();
+
+        while !self.end_of_code() {
+            match self
+                .scan_token()
+                .and_then(|ot| ot.map(|t| self.make_token(t)).transpose())
+            {
+                Ok(Some(token)) => tokens.push(token),
+                Ok(None) => {}
+                Err(e) => errors.push(e),
+            }
+        }
+
+        tokens.push(Token::new(
+            TokenType::Eof,
+            (self.start, self.current).into(),
+        ));
+
+        if errors.is_empty() {
+            Ok(tokens)
+        } else {
+            Err(errors)
         }
     }
 
@@ -55,13 +80,18 @@ impl<'a> Lexer<'a> {
             b':' => Ok(Some(TokenType::Ctrl(":".into()))),
             b',' => Ok(Some(TokenType::Ctrl(",".into()))),
             b'.' => Ok(Some(TokenType::Ctrl(".".into()))),
-            b'#' => Ok(Some(TokenType::Ctrl("#".into()))),
+            b'#' => {
+                while !self.match_next(b'\n') && !self.end_of_code() {
+                    self.advance();
+                }
+                Ok(None)
+            }
 
             // significant whitespace
             // space handling for indent / dedent may be better to do in a different place
             // b' ' => Ok(Some(TokenType::Indent(self.indent + 1))),
-            b'\r' | b' ' | b'\t' => Ok(None),
-            b'\n' => {
+            b' ' | b'\t' => Ok(None),
+            b'\n' | b'\r' => {
                 self.line += 1;
                 let mut indentation = 0;
 
@@ -79,7 +109,7 @@ impl<'a> Lexer<'a> {
                     }
                     Ok(Some(TokenType::Dedent(indentation)))
                 } else {
-                    Ok(Some(TokenType::Ctrl("\n".into())))
+                    Ok(Some(TokenType::Newline))
                 }
             }
             // b'\t' => Ok(Some(TokenType::Ctrl('\t'))),
@@ -159,6 +189,13 @@ impl<'a> Lexer<'a> {
             }),
         }
     }
+
+    fn make_token(&self, token_type: TokenType) -> Result<Token, LexError> {
+        let line = self.line;
+        let lexeme = (self.start, self.current).into();
+        Ok(Token::new(token_type, lexeme))
+    }
+
     // returns the next byte of source code and advances the internal counter
     fn advance(&mut self) -> u8 {
         let c = self.source[self.current];
@@ -247,7 +284,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn identifier(&mut self) -> Result<String, LexError> {
-        while self.peek().is_ascii_alphabetic() {
+        while self.peek().is_ascii_alphabetic() || self.peek() == b'_' {
             self.advance();
         }
 

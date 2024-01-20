@@ -25,6 +25,7 @@ impl std::fmt::Display for Literal {
     }
 }
 
+#[derive(Debug)]
 pub enum Op {
     Equals,
     Add,
@@ -61,6 +62,7 @@ impl std::fmt::Display for Op {
     }
 }
 
+#[derive(Debug)]
 pub enum TokenType {
     Keyword(String),
     Ctrl(String),
@@ -69,6 +71,8 @@ pub enum TokenType {
     Indent(usize),
     Dedent(usize),
     Identifier(String),
+    Eof,
+    Newline,
 }
 
 impl std::fmt::Display for TokenType {
@@ -81,13 +85,25 @@ impl std::fmt::Display for TokenType {
             TokenType::Indent(i) => f.write_fmt(format_args!("INDENT {}", i)),
             TokenType::Dedent(d) => f.write_fmt(format_args!("DEDENT {}", d)),
             TokenType::Identifier(i) => f.write_fmt(format_args!("IDENTIFIER {}", i)),
+            TokenType::Eof => f.write_str("END OF FILE"),
+            TokenType::Newline => f.write_str("NEWLINE"),
         }
     }
 }
 
+#[derive(Debug)]
 pub struct Token {
     token: TokenType,
     span: SourceSpan,
+}
+
+impl Token {
+    pub fn new(token_type: TokenType, span: SourceSpan) -> Self {
+        Self {
+            token: token_type,
+            span,
+        }
+    }
 }
 
 impl std::fmt::Display for Token {
