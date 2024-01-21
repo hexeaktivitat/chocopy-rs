@@ -94,3 +94,13 @@ pub fn walk_expr<T, S>(mut visitor: impl ExprVisitor<T, S>, x: &Expr, state: S) 
         Expr::Call(y) => visitor.visit_call(y, state),
     }
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Stmt {
+    Expression(Expression),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Expression {
+    pub expr: Expr,
+}

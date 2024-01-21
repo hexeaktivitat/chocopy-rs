@@ -91,8 +91,8 @@ impl std::fmt::Display for TokenType {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
-    token: TokenType,
-    span: SourceSpan,
+    pub token: TokenType,
+    pub span: SourceSpan,
 }
 
 impl Token {

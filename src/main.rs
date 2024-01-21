@@ -7,6 +7,7 @@ use thiserror::Error;
 use lexer::{LexError, Lexer};
 
 mod lexer;
+mod parser;
 mod syntax;
 mod token;
 
