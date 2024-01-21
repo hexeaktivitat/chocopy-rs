@@ -26,6 +26,7 @@ pub enum Literal {
     False,
     None,
     Empty,
+    Eol,
 }
 
 #[derive(Debug, Clone, PartialEq)]

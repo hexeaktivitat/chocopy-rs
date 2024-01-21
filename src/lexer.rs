@@ -1,3 +1,5 @@
+use std::iter::TakeWhile;
+
 use miette::{Diagnostic, NamedSource, Result, SourceSpan};
 use thiserror::Error;
 
