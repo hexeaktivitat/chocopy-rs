@@ -1,8 +1,6 @@
-use std::fmt::Write;
-
 use miette::SourceSpan;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
     Num(i32),
     Str(String),
@@ -25,7 +23,7 @@ impl std::fmt::Display for Literal {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Op {
     Equals,
     Add,
@@ -62,7 +60,7 @@ impl std::fmt::Display for Op {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
     Keyword(String),
     Ctrl(String),
@@ -91,7 +89,7 @@ impl std::fmt::Display for TokenType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Token {
     token: TokenType,
     span: SourceSpan,

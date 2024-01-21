@@ -1,4 +1,4 @@
-use miette::{Diagnostic, NamedSource, SourceSpan};
+use miette::{Diagnostic, NamedSource, Result, SourceSpan};
 use thiserror::Error;
 
 use crate::token::*;
@@ -10,7 +10,7 @@ pub enum LexError {
     InvalidCharacter {
         #[help]
         advice: String,
-        #[label("char")]
+        #[label]
         bad_char: SourceSpan,
     },
     #[error("Syntax error: Unterminated string")]
@@ -18,7 +18,7 @@ pub enum LexError {
     UnterminatedString {
         #[help]
         advice: String,
-        #[label("starting quote")]
+        #[label]
         start_quote: SourceSpan,
     },
     #[error("Syntax error: Not a valid number")]
@@ -26,7 +26,7 @@ pub enum LexError {
     NotANumber {
         #[help]
         advice: String,
-        #[label("Invalid number")]
+        #[label]
         bad_num: SourceSpan,
     },
 }
@@ -39,7 +39,6 @@ pub struct Lexer<'a> {
     current: usize,
     line: usize,
     line_start: usize,
-    lines_of_code: Vec<String>,
     indent: Vec<usize>,
 }
 
@@ -53,7 +52,6 @@ impl<'a> Lexer<'a> {
             current: 0,
             line: 0,
             line_start: 0,
-            lines_of_code: vec![],
             indent: vec![0],
         }
     }
@@ -82,14 +80,6 @@ impl<'a> Lexer<'a> {
             Ok(tokens)
         } else {
             Err(errors)
-        }
-    }
-
-    pub fn get_line(&self, line: usize) -> Result<String, Box<dyn std::error::Error>> {
-        if line < self.lines_of_code.len() {
-            Err("inaccurate line number passed".into())
-        } else {
-            Ok(self.lines_of_code[line].clone())
         }
     }
 
@@ -297,7 +287,12 @@ impl<'a> Lexer<'a> {
         } else if self.peek() == b'.' {
             return Err(LexError::InvalidCharacter {
                 advice: "chocopy-rs does not support float values".into(),
-                bad_char: (self.start, self.current - self.start).into(),
+                bad_char: (self.current, self.current - self.start).into(),
+            });
+        } else if self.peek().is_ascii_alphabetic() {
+            return Err(LexError::NotANumber {
+                advice: "not a valid integer value".into(),
+                bad_num: (self.start, self.current - self.start).into(),
             });
         }
 
