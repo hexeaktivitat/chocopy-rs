@@ -69,6 +69,7 @@ pub enum TokenType {
     Indent(usize),
     Dedent(usize),
     Identifier(String),
+    Type(String),
     Eof,
     Newline,
 }
@@ -83,6 +84,7 @@ impl std::fmt::Display for TokenType {
             TokenType::Indent(i) => f.write_fmt(format_args!("INDENT {}", i)),
             TokenType::Dedent(d) => f.write_fmt(format_args!("DEDENT {}", d)),
             TokenType::Identifier(i) => f.write_fmt(format_args!("IDENTIFIER {}", i)),
+            TokenType::Type(t) => f.write_fmt(format_args!("TYPE {}", t)),
             TokenType::Eof => f.write_str("END OF FILE"),
             TokenType::Newline => f.write_str("NEWLINE"),
         }

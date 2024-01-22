@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use miette::{Diagnostic, Error, NamedSource, Result, SourceSpan};
 use thiserror::Error;
 
@@ -17,9 +19,11 @@ pub enum ParseError {
     },
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Parser {
-    tokens: Vec<Token>,
-    current: usize,
+    pub tokens: Vec<Token>,
+    pub current: usize,
+    pub indentation: Vec<usize>,
 }
 
 trait MatchToken {
@@ -43,7 +47,11 @@ where
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
-        Self { tokens, current: 0 }
+        Self {
+            tokens,
+            current: 0,
+            indentation: vec![0],
+        }
     }
 
     pub fn parse(&mut self) -> Result<Vec<Stmt>, Vec<ParseError>> {
@@ -68,10 +76,70 @@ impl Parser {
 
     fn statement(&mut self) -> Result<Stmt, ParseError> {
         if self.matches(&[TT::Keyword("if".into())]) {
-            todo!()
+            self.if_statement()
         } else {
             self.expression_statement()
         }
+    }
+
+    fn if_statement(&mut self) -> Result<Stmt, ParseError> {
+        let condition = Box::new(self.expression()?);
+
+        self.consume(
+            &TT::Ctrl(":".into()),
+            "Expected ':' at end of if conditional".into(),
+        )?;
+        self.consume(&TT::Newline, "Expected new line after if statement".into())?;
+        let indent = self.indent()?;
+        self.indentation.push(indent);
+        let then_branch = Box::new(self.statement()?);
+
+        let mut elif_condition = vec![];
+        let mut elif_branch = vec![];
+
+        if self.matches(&[TT::Keyword("elif".into())]) {
+            loop {
+                elif_condition.push(Some(self.expression()?));
+                self.consume(
+                    &TT::Ctrl(":".into()),
+                    "Expected ':' at end of elif conditional".into(),
+                )?;
+                self.consume(
+                    &TT::Newline,
+                    "Expected new line after elif statement".into(),
+                )?;
+                let indent = self.indent()?;
+                self.indentation.push(indent);
+                elif_branch.push(Some(self.statement()?));
+
+                if !self.matches(&[TT::Keyword("elif".into())]) {
+                    break;
+                }
+            }
+        } else {
+            elif_condition.push(None);
+            elif_branch.push(None);
+        }
+
+        let mut else_branch = None;
+
+        if self.matches(&[TT::Keyword("then".into())]) {
+            self.consume(
+                &TT::Newline,
+                "expected new line after else statement".into(),
+            )?;
+            let indent = self.indent()?;
+            self.indentation.push(indent);
+            else_branch = Some(Box::new(self.statement()?));
+        }
+
+        Ok(Stmt::If(If {
+            condition,
+            then_branch,
+            elif_condition,
+            elif_branch,
+            else_branch,
+        }))
     }
 
     fn expression_statement(&mut self) -> Result<Stmt, ParseError> {
@@ -145,14 +213,18 @@ impl Parser {
 
         match self.previous().token {
             // TT::Keyword(_) => todo!(),
-            TT::Ctrl(c) => {
-                if c == "(" {
+            TT::Ctrl(c) => match c.as_str() {
+                "(" => {
                     let expr = self.expression()?;
                     self.consume(&TT::Ctrl(")".into()), "Expected ')' after '('".into())?;
                     Ok(Expr::Grouping(Grouping {
                         expr: Box::new(expr),
                     }))
-                } else if c == "[" {
+                }
+
+                // list handling should be moved to stmts (will need to cover typecasting)
+                // typecasts could be handled here though....
+                "[" => {
                     let mut list = vec![];
 
                     while self.peek().token != TT::Ctrl("]".into()) && !self.end_of_program() {
@@ -161,14 +233,14 @@ impl Parser {
 
                     self.consume(&TT::Ctrl("]".into()), "Expected ']' after '['".into())?;
                     Ok(Expr::Literal(Literal::List(list)))
-                } else {
-                    Err(ParseError::GenericError {
-                        message: "unknown errors".into(),
-                        help: "idk my bff jill".into(),
-                        span: self.tokens[self.current].span,
-                    })
                 }
-            }
+                _ => Err(ParseError::GenericError {
+                    message: "unknown errors".into(),
+                    help: "idk my bff jill".into(),
+                    span: self.previous().span,
+                }),
+            },
+
             // TT::Operator(_) => todo!(),
             TT::Value(literal) => match literal {
                 TLiteral::Num(n) => Ok(Expr::Literal(Literal::Number(n))),
@@ -185,12 +257,15 @@ impl Parser {
                 _ => Err(ParseError::GenericError {
                     message: "invalid literal".into(),
                     help: "idk my bff jill".into(),
-                    span: self.tokens[self.current].span,
+                    span: self.previous().span,
                 }),
             },
             // TT::Indent(_) => todo!(), // scope indicator
             // TT::Dedent(_) => todo!(), // scope delineator
             TT::Identifier(_) => Ok(Expr::Variable(Variable {
+                name: self.previous(),
+            })),
+            TT::Type(_) => Ok(Expr::Type(Type {
                 name: self.previous(),
             })),
             // TT::Eof => todo!(),
@@ -226,7 +301,7 @@ impl Parser {
             Err(ParseError::GenericError {
                 message,
                 help: "idk my bff jill".into(),
-                span: self.tokens[self.current].span,
+                span: self.previous().span,
             })
         }
     }
@@ -247,6 +322,30 @@ impl Parser {
             }
         }
         false
+    }
+
+    fn indent(&mut self) -> Result<usize, ParseError> {
+        let token = self.peek();
+
+        match token.token {
+            TT::Indent(i) => {
+                if &i > self.indentation.last().unwrap() {
+                    self.consume(&TT::Indent(i), "expecting indentation".into());
+                    Ok(i)
+                } else {
+                    Err(ParseError::GenericError {
+                        message: "expected increased indentation".into(),
+                        help: "indent the thing".into(),
+                        span: token.span,
+                    })
+                }
+            }
+            _ => Err(ParseError::GenericError {
+                message: "expected indentation".into(),
+                help: "consider indenting".into(),
+                span: token.span,
+            }),
+        }
     }
 
     fn end_of_program(&self) -> bool {

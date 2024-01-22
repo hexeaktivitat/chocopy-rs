@@ -15,6 +15,7 @@ pub enum Expr {
     Logical(Logical),
     Grouping(Grouping),
     Call(Call),
+    Type(Type),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -72,6 +73,11 @@ pub struct Call {
     pub args: Vec<Expr>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct Type {
+    pub name: Token,
+}
+
 pub trait ExprVisitor<T, S> {
     fn visit_literal(&mut self, x: &Literal, state: S) -> T;
     fn visit_unary(&mut self, x: &Unary, state: S) -> T;
@@ -81,6 +87,7 @@ pub trait ExprVisitor<T, S> {
     fn visit_logical(&mut self, x: &Logical, state: S) -> T;
     fn visit_grouping(&mut self, x: &Grouping, state: S) -> T;
     fn visit_call(&mut self, x: &Call, state: S) -> T;
+    fn visit_type(&mut self, x: &Type, state: S) -> T;
 }
 
 pub fn walk_expr<T, S>(mut visitor: impl ExprVisitor<T, S>, x: &Expr, state: S) -> T {
@@ -93,12 +100,23 @@ pub fn walk_expr<T, S>(mut visitor: impl ExprVisitor<T, S>, x: &Expr, state: S) 
         Expr::Logical(y) => visitor.visit_logical(y, state),
         Expr::Grouping(y) => visitor.visit_grouping(y, state),
         Expr::Call(y) => visitor.visit_call(y, state),
+        Expr::Type(y) => visitor.visit_type(y, state),
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Stmt {
     Expression(Expression),
+    If(If),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct If {
+    pub condition: Box<Expr>,
+    pub then_branch: Box<Stmt>,
+    pub elif_condition: Vec<Option<Expr>>,
+    pub elif_branch: Vec<Option<Stmt>>,
+    pub else_branch: Option<Box<Stmt>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

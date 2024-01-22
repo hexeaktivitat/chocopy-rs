@@ -42,6 +42,7 @@ pub struct Lexer<'a> {
     line: usize,
     line_start: usize,
     indent: Vec<usize>,
+    indent_flag: bool,
 }
 
 impl<'a> Lexer<'a> {
@@ -55,6 +56,7 @@ impl<'a> Lexer<'a> {
             line: 0,
             line_start: 0,
             indent: vec![0],
+            indent_flag: false,
         }
     }
 
@@ -99,6 +101,8 @@ impl<'a> Lexer<'a> {
             b'}' => Ok(Some(TokenType::Ctrl("}".into()))),
             b'[' => Ok(Some(TokenType::Ctrl("[".into()))),
             b']' => Ok(Some(TokenType::Ctrl("]".into()))),
+
+            // check for types here?
             b':' => Ok(Some(TokenType::Ctrl(":".into()))),
             b',' => Ok(Some(TokenType::Ctrl(",".into()))),
             b'.' => Ok(Some(TokenType::Ctrl(".".into()))),
@@ -112,27 +116,34 @@ impl<'a> Lexer<'a> {
             // significant whitespace
             // space handling for indent / dedent may be better to do in a different place
             // b' ' => Ok(Some(TokenType::Indent(self.indent + 1))),
-            b' ' | b'\t' => Ok(None),
+            b' ' | b'\t' => {
+                if self.indent_flag {
+                    self.indent_flag = false;
+                    let mut indentation = 0;
+
+                    while self.match_next(b' ') {
+                        indentation += 1;
+                    }
+
+                    if &indentation > self.indent.last().unwrap() {
+                        self.indent.push(indentation);
+                        Ok(Some(TokenType::Indent(indentation)))
+                    } else if &indentation < self.indent.last().unwrap() {
+                        while &indentation < self.indent.last().unwrap() {
+                            self.indent.pop();
+                        }
+                        Ok(Some(TokenType::Dedent(indentation)))
+                    } else {
+                        Ok(None)
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
             b'\n' | b'\r' => {
                 self.line += 1;
-                let mut indentation = 0;
-
-                // indent checking here
-                while self.match_next(b' ') {
-                    indentation += 1;
-                }
-
-                if &indentation > self.indent.last().unwrap() {
-                    self.indent.push(indentation);
-                    Ok(Some(TokenType::Indent(indentation)))
-                } else if &indentation < self.indent.last().unwrap() {
-                    while &indentation < self.indent.last().unwrap() {
-                        self.indent.pop();
-                    }
-                    Ok(Some(TokenType::Dedent(indentation)))
-                } else {
-                    Ok(Some(TokenType::Newline))
-                }
+                self.indent_flag = true;
+                Ok(Some(TokenType::Newline))
             }
             // b'\t' => Ok(Some(TokenType::Ctrl('\t'))),
 
@@ -196,7 +207,7 @@ impl<'a> Lexer<'a> {
                     | "is" | "lambda" | "nonlocal" | "not" | "or" | "pass" | "raise" | "return"
                     | "try" | "while" | "with" | "yield" => Some(TokenType::Keyword(x)),
 
-                    // identifier for function or variable
+                    // identifier for function or variable or type
                     _ => Some(TokenType::Identifier(x)),
                 })
             }
@@ -286,7 +297,7 @@ impl<'a> Lexer<'a> {
                 advice: "not a valid integer value".into(),
                 bad_num: (self.start, self.current - self.start).into(),
             });
-        } else if self.peek() == b'.' {
+        } else if self.peek() == b'.' && self.peek_next().is_ascii_digit() {
             return Err(LexError::InvalidCharacter {
                 advice: "chocopy-rs does not support float values".into(),
                 bad_char: (self.current, self.current - self.start).into(),
