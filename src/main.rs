@@ -1,7 +1,7 @@
 use std::env::args;
-use std::fs::{read, File};
+use std::fs::read;
 
-use miette::{Diagnostic, Result, SourceSpan};
+use miette::{Diagnostic, Result};
 use thiserror::Error;
 
 use lexer::{LexError, Lexer};

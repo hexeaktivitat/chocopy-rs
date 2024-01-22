@@ -1,6 +1,4 @@
-use std::collections::VecDeque;
-
-use miette::{Diagnostic, Error, NamedSource, Result, SourceSpan};
+use miette::{Diagnostic, Result, SourceSpan};
 use thiserror::Error;
 
 use crate::syntax::*;
@@ -265,9 +263,9 @@ impl Parser {
             TT::Identifier(_) => Ok(Expr::Variable(Variable {
                 name: self.previous(),
             })),
-            TT::Type(_) => Ok(Expr::Type(Type {
-                name: self.previous(),
-            })),
+            // TT::Type(_) => Ok(Expr::Type(Type {
+            // name: self.previous(),
+            // })),
             // TT::Eof => todo!(),
             // TT::Newline => todo!(),
             _ => Ok(Expr::Literal(Literal::Eol)),
@@ -330,7 +328,7 @@ impl Parser {
         match token.token {
             TT::Indent(i) => {
                 if &i > self.indentation.last().unwrap() {
-                    self.consume(&TT::Indent(i), "expecting indentation".into());
+                    self.consume(&TT::Indent(i), "expecting indentation".into())?;
                     Ok(i)
                 } else {
                     Err(ParseError::GenericError {
@@ -343,6 +341,30 @@ impl Parser {
             _ => Err(ParseError::GenericError {
                 message: "expected indentation".into(),
                 help: "consider indenting".into(),
+                span: token.span,
+            }),
+        }
+    }
+
+    fn dedent(&mut self) -> Result<usize, ParseError> {
+        let token = self.peek();
+
+        match token.token {
+            TT::Dedent(d) => {
+                if &d < self.indentation.last().unwrap() {
+                    self.consume(&TT::Dedent(d), "expecting dedent".into())?;
+                    Ok(d)
+                } else {
+                    Err(ParseError::GenericError {
+                        message: "expected dedent".into(),
+                        help: "consider dedenting".into(),
+                        span: token.span,
+                    })
+                }
+            }
+            _ => Err(ParseError::GenericError {
+                message: "expected dedent".into(),
+                help: "consider dedenting".into(),
                 span: token.span,
             }),
         }
