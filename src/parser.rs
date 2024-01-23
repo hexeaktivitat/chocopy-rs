@@ -57,7 +57,7 @@ impl Parser {
         let mut errors = vec![];
 
         while !self.end_of_program() {
-            match self.statement() {
+            match self.declaration() {
                 Ok(s) => statements.push(s),
                 Err(e) => errors.push(e),
             }
@@ -70,15 +70,36 @@ impl Parser {
         }
     }
 
+    // declarations
+
+    fn declaration(&mut self) -> Result<Stmt, ParseError> {
+        self.statement()
+    }
+
     // statements
 
     fn statement(&mut self) -> Result<Stmt, ParseError> {
-        if self.matches(&[TT::Keyword("if".into())]) {
+        if self.matches(&[TT::Indent]) {
+            self.block()
+        } else if self.matches(&[TT::Keyword("if".into())]) {
             self.if_statement()
-        } else if self.matches(&[TT::Indent]) {
         } else {
             self.expression_statement()
         }
+    }
+
+    fn block(&mut self) -> Result<Stmt, ParseError> {
+        let mut scope = vec![];
+
+        while !self.check(&TT::Dedent) && !self.end_of_program() {
+            scope.push(self.declaration()?);
+        }
+        self.consume(
+            &TT::Dedent,
+            "Expected dedentation after statement block".into(),
+        )?;
+
+        Ok(Stmt::Block(Block { scope }))
     }
 
     fn if_statement(&mut self) -> Result<Stmt, ParseError> {
@@ -88,9 +109,6 @@ impl Parser {
             &TT::Ctrl(":".into()),
             "Expected ':' at end of if conditional".into(),
         )?;
-        self.consume(&TT::Newline, "Expected new line after if statement".into())?;
-        let indent = self.indent()?;
-        self.indentation.push(indent);
         let then_branch = Box::new(self.statement()?);
 
         let mut elif_condition = vec![];
@@ -103,12 +121,6 @@ impl Parser {
                     &TT::Ctrl(":".into()),
                     "Expected ':' at end of elif conditional".into(),
                 )?;
-                self.consume(
-                    &TT::Newline,
-                    "Expected new line after elif statement".into(),
-                )?;
-                let indent = self.indent()?;
-                self.indentation.push(indent);
                 elif_branch.push(Some(self.statement()?));
 
                 if !self.matches(&[TT::Keyword("elif".into())]) {
@@ -123,12 +135,6 @@ impl Parser {
         let mut else_branch = None;
 
         if self.matches(&[TT::Keyword("then".into())]) {
-            self.consume(
-                &TT::Newline,
-                "expected new line after else statement".into(),
-            )?;
-            let indent = self.indent()?;
-            self.indentation.push(indent);
             else_branch = Some(Box::new(self.statement()?));
         }
 

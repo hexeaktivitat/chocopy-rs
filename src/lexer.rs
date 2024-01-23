@@ -1,6 +1,4 @@
-use std::iter::TakeWhile;
-
-use miette::{Diagnostic, NamedSource, Result, SourceSpan};
+use miette::{Diagnostic, Result, SourceSpan};
 use thiserror::Error;
 
 use crate::token::*;
@@ -40,7 +38,7 @@ pub struct Lexer<'a> {
     start: usize,
     current: usize,
     line: usize,
-    line_start: usize,
+    // line_start: usize,
     indent: Vec<usize>,
     indent_flag: bool,
 }
@@ -54,7 +52,7 @@ impl<'a> Lexer<'a> {
             start: 0,
             current: 0,
             line: 0,
-            line_start: 0,
+            // line_start: 0,
             indent: vec![0],
             indent_flag: false,
         }
@@ -221,7 +219,6 @@ impl<'a> Lexer<'a> {
     }
 
     fn make_token(&self, token_type: TokenType) -> Result<Token, LexError> {
-        let line = self.line;
         let lexeme = (self.start, self.current - self.start).into();
         Ok(Token::new(token_type, lexeme))
     }
