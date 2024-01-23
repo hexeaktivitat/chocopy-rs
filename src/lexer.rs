@@ -199,11 +199,16 @@ impl<'a> Lexer<'a> {
             c @ b'_' | c if c.is_ascii_alphabetic() => {
                 self.identifier().map(|x| match x.as_str() {
                     // keywords first
-                    "False" | "True" | "None" | "and" | "as" | "assert" | "async" | "await"
-                    | "break" | "class" | "continue" | "def" | "del" | "elif" | "else"
-                    | "except" | "finally" | "for" | "from" | "global" | "if" | "import" | "in"
-                    | "is" | "lambda" | "nonlocal" | "not" | "or" | "pass" | "raise" | "return"
-                    | "try" | "while" | "with" | "yield" => Some(TokenType::Keyword(x)),
+                    "and" | "as" | "assert" | "async" | "await" | "break" | "class"
+                    | "continue" | "def" | "del" | "elif" | "else" | "except" | "finally"
+                    | "for" | "from" | "global" | "if" | "import" | "in" | "is" | "lambda"
+                    | "nonlocal" | "not" | "or" | "pass" | "raise" | "return" | "try" | "while"
+                    | "with" | "yield" => Some(TokenType::Keyword(x)),
+
+                    "False" => Some(TokenType::Value(Literal::Boolean(false))),
+                    "True" => Some(TokenType::Value(Literal::Boolean(true))),
+                    "None" => Some(TokenType::Value(Literal::None)),
+                    "Empty" => Some(TokenType::Value(Literal::Empty)),
 
                     // identifier for function or variable or type
                     _ => Some(TokenType::Identifier(x)),
