@@ -107,7 +107,18 @@ pub fn walk_expr<T, S>(mut visitor: impl ExprVisitor<T, S>, x: &Expr, state: S) 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Stmt {
     Expression(Expression),
+    Block(Block),
     If(If),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Expression {
+    pub expr: Expr,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Block {
+    pub scope: Vec<Stmt>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -117,9 +128,4 @@ pub struct If {
     pub elif_condition: Vec<Option<Expr>>,
     pub elif_branch: Vec<Option<Stmt>>,
     pub else_branch: Option<Box<Stmt>>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Expression {
-    pub expr: Expr,
 }

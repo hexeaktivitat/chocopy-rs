@@ -1,4 +1,6 @@
-use miette::{Diagnostic, Result, SourceSpan};
+use std::iter::TakeWhile;
+
+use miette::{Diagnostic, NamedSource, Result, SourceSpan};
 use thiserror::Error;
 
 use crate::token::*;
@@ -38,7 +40,7 @@ pub struct Lexer<'a> {
     start: usize,
     current: usize,
     line: usize,
-    // line_start: usize,
+    line_start: usize,
     indent: Vec<usize>,
     indent_flag: bool,
 }
@@ -52,7 +54,7 @@ impl<'a> Lexer<'a> {
             start: 0,
             current: 0,
             line: 0,
-            // line_start: 0,
+            line_start: 0,
             indent: vec![0],
             indent_flag: false,
         }
@@ -125,14 +127,14 @@ impl<'a> Lexer<'a> {
 
                     if &indentation > self.indent.last().unwrap() {
                         self.indent.push(indentation);
-                        Ok(Some(TokenType::Indent(indentation)))
+                        Ok(Some(TokenType::Indent))
                     } else if &indentation < self.indent.last().unwrap() {
                         while &indentation < self.indent.last().unwrap() {
                             self.indent.pop();
                         }
-                        Ok(Some(TokenType::Dedent(indentation)))
+                        Ok(Some(TokenType::Dedent))
                     } else {
-                        Ok(Some(TokenType::Indent(indentation)))
+                        Ok(None)
                     }
                 } else {
                     Ok(None)
@@ -199,16 +201,11 @@ impl<'a> Lexer<'a> {
             c @ b'_' | c if c.is_ascii_alphabetic() => {
                 self.identifier().map(|x| match x.as_str() {
                     // keywords first
-                    "and" | "as" | "assert" | "async" | "await" | "break" | "class"
-                    | "continue" | "def" | "del" | "elif" | "else" | "except" | "finally"
-                    | "for" | "from" | "global" | "if" | "import" | "in" | "is" | "lambda"
-                    | "nonlocal" | "not" | "or" | "pass" | "raise" | "return" | "try" | "while"
-                    | "with" | "yield" => Some(TokenType::Keyword(x)),
-
-                    "None" => Some(TokenType::Value(Literal::None)),
-                    "Empty" => Some(TokenType::Value(Literal::Empty)),
-                    "True" => Some(TokenType::Value(Literal::Boolean(true))),
-                    "False" => Some(TokenType::Value(Literal::Boolean(false))),
+                    "False" | "True" | "None" | "and" | "as" | "assert" | "async" | "await"
+                    | "break" | "class" | "continue" | "def" | "del" | "elif" | "else"
+                    | "except" | "finally" | "for" | "from" | "global" | "if" | "import" | "in"
+                    | "is" | "lambda" | "nonlocal" | "not" | "or" | "pass" | "raise" | "return"
+                    | "try" | "while" | "with" | "yield" => Some(TokenType::Keyword(x)),
 
                     // identifier for function or variable or type
                     _ => Some(TokenType::Identifier(x)),
@@ -224,7 +221,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn make_token(&self, token_type: TokenType) -> Result<Token, LexError> {
-        // let line = self.line;
+        let line = self.line;
         let lexeme = (self.start, self.current - self.start).into();
         Ok(Token::new(token_type, lexeme))
     }

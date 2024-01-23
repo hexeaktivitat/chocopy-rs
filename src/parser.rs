@@ -75,6 +75,7 @@ impl Parser {
     fn statement(&mut self) -> Result<Stmt, ParseError> {
         if self.matches(&[TT::Keyword("if".into())]) {
             self.if_statement()
+        } else if self.matches(&[TT::Indent]) {
         } else {
             self.expression_statement()
         }
@@ -321,55 +322,31 @@ impl Parser {
         }
         false
     }
+    /*
+        fn indent(&mut self) -> Result<usize, ParseError> {
+            let token = self.peek();
 
-    fn indent(&mut self) -> Result<usize, ParseError> {
-        let token = self.peek();
-
-        match token.token {
-            TT::Indent(i) => {
-                if &i > self.indentation.last().unwrap() {
-                    self.consume(&TT::Indent(i), "expecting indentation".into())?;
-                    Ok(i)
-                } else {
-                    Err(ParseError::GenericError {
-                        message: "expected increased indentation".into(),
-                        help: "indent the thing".into(),
-                        span: token.span,
-                    })
+            match token.token {
+                TT::Indent {
+                    if &i > self.indentation.last().unwrap() {
+                        self.consume(&TT::Indent(i), "expecting indentation".into());
+                        Ok(i)
+                    } else {
+                        Err(ParseError::GenericError {
+                            message: "expected increased indentation".into(),
+                            help: "indent the thing".into(),
+                            span: token.span,
+                        })
+                    }
                 }
+                _ => Err(ParseError::GenericError {
+                    message: "expected indentation".into(),
+                    help: "consider indenting".into(),
+                    span: token.span,
+                }),
             }
-            _ => Err(ParseError::GenericError {
-                message: "expected indentation".into(),
-                help: "consider indenting".into(),
-                span: token.span,
-            }),
         }
-    }
-
-    fn dedent(&mut self) -> Result<usize, ParseError> {
-        let token = self.peek();
-
-        match token.token {
-            TT::Dedent(d) => {
-                if &d < self.indentation.last().unwrap() {
-                    self.consume(&TT::Dedent(d), "expecting dedent".into())?;
-                    Ok(d)
-                } else {
-                    Err(ParseError::GenericError {
-                        message: "expected dedent".into(),
-                        help: "consider dedenting".into(),
-                        span: token.span,
-                    })
-                }
-            }
-            _ => Err(ParseError::GenericError {
-                message: "expected dedent".into(),
-                help: "consider dedenting".into(),
-                span: token.span,
-            }),
-        }
-    }
-
+    */
     fn end_of_program(&self) -> bool {
         self.peek().token == TT::Eof
     }
