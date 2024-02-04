@@ -90,7 +90,7 @@ impl Parser {
     // declarations
 
     fn declaration(&mut self) -> Result<Stmt, ParseError> {
-        if self.matches(&[TT::Keyword("def".into())]) {
+        let res = if self.matches(&[TT::Keyword("def".into())]) {
             self.declare_func()
         } else if matches!(self.previous().token, TT::Identifier(_))
             && self.peek().token == TT::Ctrl(":".into())
@@ -98,7 +98,12 @@ impl Parser {
             self.declare_variable()
         } else {
             self.statement()
+        };
+
+        if res.is_err() {
+            self.synchronize();
         }
+        res
     }
 
     fn declare_func(&mut self) -> Result<Stmt, ParseError> {
@@ -533,7 +538,7 @@ impl Parser {
             // TT::Eof => todo!(),
             // TT::Newline => todo!(),
             _ => Err(ParseError::UnexpectedToken {
-                help: "idk".into(),
+                help: "terminal parse resulted in null token".into(),
                 span: self.previous().span,
             }),
         }
@@ -585,7 +590,7 @@ impl Parser {
             Ok(self.advance())
         } else {
             Err(ParseError::AlternateToken {
-                help: "idk my bff jill".into(),
+                help: message.into(),
                 span: self.previous().span,
             })
         }
@@ -635,5 +640,20 @@ impl Parser {
     */
     fn end_of_program(&self) -> bool {
         self.peek().token == TT::Eof
+    }
+
+    fn synchronize(&mut self) {
+        self.advance();
+
+        while !self.end_of_program() {
+            if self.previous().token == TT::Newline {
+                return;
+            } else {
+                match self.peek().token {
+                    TT::Keyword(_) => return,
+                    _ => self.advance(),
+                };
+            }
+        }
     }
 }
