@@ -2,7 +2,7 @@ use miette::{Diagnostic, Result, SourceSpan};
 use thiserror::Error;
 
 use crate::syntax::*;
-use crate::token::{Literal as TLiteral, Token, TokenType as TT};
+use crate::token::{Literal as TLiteral, Op, Token, TokenType as TT};
 
 #[derive(Error, Debug, Diagnostic)]
 pub enum ParseError {
@@ -79,7 +79,7 @@ impl Parser {
     // statements
 
     fn statement(&mut self) -> Result<Stmt, ParseError> {
-        if self.matches(&[TT::Indent]) {
+        if self.matches(&[TT::Newline]) {
             self.block()
         } else if self.matches(&[TT::Keyword("if".into())]) {
             self.if_statement()
@@ -89,15 +89,17 @@ impl Parser {
     }
 
     fn block(&mut self) -> Result<Stmt, ParseError> {
+        self.consume(
+            &TT::Indent,
+            "Expected indentation at start of statement block",
+        )?;
+
         let mut scope = vec![];
 
         while !self.check(&TT::Dedent) && !self.end_of_program() {
             scope.push(self.declaration()?);
         }
-        self.consume(
-            &TT::Dedent,
-            "Expected dedentation after statement block".into(),
-        )?;
+        self.consume(&TT::Dedent, "Expected dedentation after statement block")?;
 
         Ok(Stmt::Block(Block { scope }))
     }
@@ -107,7 +109,7 @@ impl Parser {
 
         self.consume(
             &TT::Ctrl(":".into()),
-            "Expected ':' at end of if conditional".into(),
+            "Expected ':' at end of if conditional",
         )?;
         let then_branch = Box::new(self.statement()?);
 
@@ -119,7 +121,7 @@ impl Parser {
                 elif_condition.push(Some(self.expression()?));
                 self.consume(
                     &TT::Ctrl(":".into()),
-                    "Expected ':' at end of elif conditional".into(),
+                    "Expected ':' at end of elif conditional",
                 )?;
                 elif_branch.push(Some(self.statement()?));
 
@@ -149,7 +151,7 @@ impl Parser {
 
     fn expression_statement(&mut self) -> Result<Stmt, ParseError> {
         let expr = self.expression()?;
-        self.consume(&TT::Newline, "Expected newline".into())?;
+        self.consume(&TT::Newline, "Expected newline")?;
         Ok(Stmt::Expression(Expression { expr }))
     }
 
@@ -160,57 +162,84 @@ impl Parser {
     }
 
     fn assignment(&mut self) -> Result<Expr, ParseError> {
-        let expr = self.or();
+        let mut expr = self.or();
 
         expr
     }
 
     fn or(&mut self) -> Result<Expr, ParseError> {
-        let expr = self.and();
+        let mut expr = self.and();
 
         expr
     }
 
     fn and(&mut self) -> Result<Expr, ParseError> {
-        let expr = self.equality();
+        let mut expr = self.equality();
 
         expr
     }
 
     fn equality(&mut self) -> Result<Expr, ParseError> {
-        let expr = self.comparison();
+        let mut expr = self.comparison();
 
         expr
     }
 
     fn comparison(&mut self) -> Result<Expr, ParseError> {
-        let expr = self.term();
+        let mut expr = self.term();
 
         expr
     }
 
     fn term(&mut self) -> Result<Expr, ParseError> {
-        let expr = self.factor();
+        let mut expr = self.factor()?;
 
-        expr
+        while self.matches(&[TT::Operator(Op::Add), TT::Operator(Op::Subtract)]) {
+            let operator = self.previous();
+            let right = self.term()?;
+            expr = Expr::Binary(Binary {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            });
+        }
+
+        Ok(expr)
     }
 
     fn factor(&mut self) -> Result<Expr, ParseError> {
-        let expr = self.unary();
+        let mut expr = self.unary()?;
 
-        expr
+        while self.matches(&[TT::Operator(Op::Multiply), TT::Operator(Op::Divide)]) {
+            let operator = self.previous();
+            let right = self.factor()?;
+            expr = Expr::Binary(Binary {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            });
+        }
+
+        Ok(expr)
     }
 
     fn unary(&mut self) -> Result<Expr, ParseError> {
-        let expr = self.call();
-
-        expr
+        if self.matches(&[TT::Keyword("not".into())]) {
+            let operator = self.previous();
+            let right = self.unary()?;
+            Ok(Expr::Unary(Unary {
+                operator,
+                right: Box::new(right),
+            }))
+        } else {
+            self.call()
+        }
     }
 
     fn call(&mut self) -> Result<Expr, ParseError> {
-        let expr = self.primary();
+        let mut expr = self.primary()?;
 
-        expr
+        Ok(expr)
     }
 
     fn primary(&mut self) -> Result<Expr, ParseError> {
@@ -221,7 +250,7 @@ impl Parser {
             TT::Ctrl(c) => match c.as_str() {
                 "(" => {
                     let expr = self.expression()?;
-                    self.consume(&TT::Ctrl(")".into()), "Expected ')' after '('".into())?;
+                    self.consume(&TT::Ctrl(")".into()), "Expected ')' after '('")?;
                     Ok(Expr::Grouping(Grouping {
                         expr: Box::new(expr),
                     }))
@@ -236,7 +265,7 @@ impl Parser {
                         list.push(self.expression()?);
                     }
 
-                    self.consume(&TT::Ctrl("]".into()), "Expected ']' after '['".into())?;
+                    self.consume(&TT::Ctrl("]".into()), "Expected ']' after '['")?;
                     Ok(Expr::Literal(Literal::List(list)))
                 }
                 _ => Err(ParseError::GenericError {
@@ -298,13 +327,13 @@ impl Parser {
     fn consume(
         &mut self,
         token_type: &impl MatchToken,
-        message: String,
+        message: &str,
     ) -> Result<Token, ParseError> {
         if self.check(token_type) {
             Ok(self.advance())
         } else {
             Err(ParseError::GenericError {
-                message,
+                message: message.into(),
                 help: "idk my bff jill".into(),
                 span: self.previous().span,
             })
