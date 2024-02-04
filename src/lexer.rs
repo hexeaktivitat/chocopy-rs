@@ -75,7 +75,7 @@ impl<'a> Lexer<'a> {
 
         tokens.push(Token::new(
             TokenType::Eof,
-            (self.start, self.current).into(),
+            (self.start, self.current - self.start).into(),
         ));
 
         if errors.is_empty() {

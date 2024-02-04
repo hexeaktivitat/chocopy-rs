@@ -7,9 +7,26 @@ use crate::token::{Literal as TLiteral, Op, Token, TokenType as TT};
 #[derive(Error, Debug, Diagnostic)]
 pub enum ParseError {
     #[error("Generic error thrown")]
+    // #[error()]
     #[diagnostic(code(parser::generic_error))]
     GenericError {
         message: String,
+        #[help]
+        help: String,
+        #[label]
+        span: SourceSpan,
+    },
+
+    #[error("Unexpected token")]
+    UnexpectedToken {
+        #[help]
+        help: String,
+        #[label]
+        span: SourceSpan,
+    },
+
+    #[error("Expected alternate token")]
+    AlternateToken {
         #[help]
         help: String,
         #[label]
@@ -73,7 +90,113 @@ impl Parser {
     // declarations
 
     fn declaration(&mut self) -> Result<Stmt, ParseError> {
-        self.statement()
+        if self.matches(&[TT::Keyword("def".into())]) {
+            self.declare_func()
+        } else if matches!(self.previous().token, TT::Identifier(_))
+            && self.peek().token == TT::Ctrl(":".into())
+        {
+            self.declare_variable()
+        } else {
+            self.statement()
+        }
+    }
+
+    fn declare_func(&mut self) -> Result<Stmt, ParseError> {
+        let name = self.consume(
+            &|t: &Token| matches!(t.token, TT::Identifier(_)),
+            "expected name of func after def",
+        )?;
+
+        self.consume(&TT::Ctrl("(".into()), "expected '(' after function name ")?;
+
+        let mut params = vec![];
+        let mut param_types = vec![];
+
+        if !self.check(&TT::Ctrl(")".into())) {
+            loop {
+                if params.len() >= 255 {
+                    panic!("why");
+                }
+
+                params.push(
+                    self.consume(
+                        &|t: &Token| matches!(t.token, TT::Identifier(_)),
+                        "expected parameter value",
+                    )?
+                    .clone(),
+                );
+
+                self.consume(&TT::Ctrl(":".into()), "expected type for param")?;
+
+                param_types.push(
+                    self.consume(
+                        &|t: &Token| matches!(t.token, TT::Identifier(_)),
+                        "expected parameter type",
+                    )?
+                    .clone(),
+                );
+
+                if !self.matches(&[TT::Ctrl(",".into())]) {
+                    break;
+                }
+            }
+        }
+
+        self.consume(
+            &TT::Ctrl(")".into()),
+            "expected ')' after function parameters",
+        )?;
+
+        let type_id = if self.peek().token == TT::Ctrl("->".into()) {
+            self.consume(&TT::Ctrl("->".into()), "this shouldn't fail")?;
+            Some(self.consume(
+                &|t: &Token| matches!(t.token, TT::Identifier(_)),
+                "expected return type after function decl",
+            )?)
+        } else {
+            None
+        };
+
+        self.consume(&TT::Newline, "expected newline after function declaration")?;
+
+        let body = self.block()?;
+
+        Ok(Stmt::Func(Func {
+            name,
+            type_id,
+            parameters: params,
+            param_types,
+            body: match body {
+                Stmt::Block(Block { scope }) => scope,
+                _ => unreachable!("somehow this was reached"),
+            },
+        }))
+    }
+
+    fn declare_variable(&mut self) -> Result<Stmt, ParseError> {
+        let name = self.previous();
+        self.consume(
+            &TT::Ctrl(":".into()),
+            "expected : for type declaration after var name",
+        )?;
+
+        let type_id = self.consume(
+            &|t: &Token| matches!(t.token, TT::Identifier(_)),
+            "Expected type name",
+        )?;
+
+        let mut initializer = Expr::Literal(Literal::None);
+        if self.matches(&[TT::Operator(Op::Equals)]) {
+            initializer = self.expression()?;
+        }
+
+        self.consume(&TT::Newline, "expected newline after variable decl")?;
+
+        Ok(Stmt::Var(Var {
+            name,
+            type_id,
+            initializer: Some(Box::new(initializer)),
+        }))
     }
 
     // statements
@@ -381,8 +504,7 @@ impl Parser {
 
                     Ok(Expr::Literal(Literal::List(vexpr)))
                 } else {
-                    Err(ParseError::GenericError {
-                        message: "unexpected token".into(),
+                    Err(ParseError::UnexpectedToken {
                         help: "idk".into(),
                         span: self.previous().span,
                     })
@@ -405,13 +527,12 @@ impl Parser {
             }),
             // TT::Indent => todo!(),
             // TT::Dedent => todo!(),
-            TT::Identifier(_) => Ok(Expr::Variable(Variable {
+            TT::Identifier(_) => Ok(Expr::Identifier(Identifier {
                 name: self.previous(),
             })),
             // TT::Eof => todo!(),
             // TT::Newline => todo!(),
-            _ => Err(ParseError::GenericError {
-                message: "unexpected token".into(),
+            _ => Err(ParseError::UnexpectedToken {
                 help: "idk".into(),
                 span: self.previous().span,
             }),
@@ -463,8 +584,7 @@ impl Parser {
         if self.check(token_type) {
             Ok(self.advance())
         } else {
-            Err(ParseError::GenericError {
-                message: message.into(),
+            Err(ParseError::AlternateToken {
                 help: "idk my bff jill".into(),
                 span: self.previous().span,
             })
