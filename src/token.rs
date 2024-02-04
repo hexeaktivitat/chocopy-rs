@@ -5,7 +5,7 @@ pub enum Literal {
     Num(i32),
     Str(String),
     Boolean(bool),
-    List(Vec<Literal>),
+    // List(Vec<Literal>),
     None,
     Empty,
 }
@@ -16,7 +16,7 @@ impl std::fmt::Display for Literal {
             Literal::Num(n) => f.write_fmt(format_args!("NUM: {}", n)),
             Literal::Str(s) => f.write_fmt(format_args!("STR: {}", s)),
             Literal::Boolean(b) => f.write_fmt(format_args!("BOOL: {}", b)),
-            Literal::List(l) => f.write_fmt(format_args!("LIST: {:?}", l)),
+            // Literal::List(l) => f.write_fmt(format_args!("LIST: {:?}", l)),
             Literal::None => f.write_str("<NONE>"),
             Literal::Empty => f.write_str("<EMPTY>"),
         }

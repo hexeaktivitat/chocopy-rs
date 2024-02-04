@@ -16,6 +16,7 @@ pub enum Expr {
     Grouping(Grouping),
     Call(Call),
     Type(Type),
+    Index(Index),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -56,9 +57,9 @@ pub struct Assign {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Logical {
-    left: Box<Expr>,
-    operator: Token,
-    right: Box<Expr>,
+    pub left: Box<Expr>,
+    pub operator: Token,
+    pub right: Box<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -78,6 +79,11 @@ pub struct Type {
     pub name: Token,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct Index {
+    pub value: Box<Expr>,
+}
+
 pub trait ExprVisitor<T, S> {
     fn visit_literal(&mut self, x: &Literal, state: S) -> T;
     fn visit_unary(&mut self, x: &Unary, state: S) -> T;
@@ -88,6 +94,7 @@ pub trait ExprVisitor<T, S> {
     fn visit_grouping(&mut self, x: &Grouping, state: S) -> T;
     fn visit_call(&mut self, x: &Call, state: S) -> T;
     fn visit_type(&mut self, x: &Type, state: S) -> T;
+    fn visit_index(&mut self, x: &Index, state: S) -> T;
 }
 
 pub fn walk_expr<T, S>(mut visitor: impl ExprVisitor<T, S>, x: &Expr, state: S) -> T {
@@ -101,6 +108,7 @@ pub fn walk_expr<T, S>(mut visitor: impl ExprVisitor<T, S>, x: &Expr, state: S) 
         Expr::Grouping(y) => visitor.visit_grouping(y, state),
         Expr::Call(y) => visitor.visit_call(y, state),
         Expr::Type(y) => visitor.visit_type(y, state),
+        Expr::Index(y) => visitor.visit_index(y, state),
     }
 }
 

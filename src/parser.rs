@@ -140,6 +140,8 @@ impl Parser {
             else_branch = Some(Box::new(self.statement()?));
         }
 
+        self.consume(&TT::Newline, "expected newline after if block")?;
+
         Ok(Stmt::If(If {
             condition,
             then_branch,
@@ -158,37 +160,97 @@ impl Parser {
     // expressions
 
     fn expression(&mut self) -> Result<Expr, ParseError> {
-        self.assignment()
+        self.cexpr()
     }
 
-    fn assignment(&mut self) -> Result<Expr, ParseError> {
-        let mut expr = self.or();
+    /// handles:
+    /// ID
+    /// literal
+    /// [lists]
+    /// ( expr )
+    /// member_expr : cexpr . ID
+    ///             : cexpr . ID ( params )
+    /// index_expr  : cexpr [ expr ]
+    /// ID ( params )
+    /// cexpr operator cexpr
+    /// - cexpri
+    fn cexpr(&mut self) -> Result<Expr, ParseError> {
+        let mut expr = self.or()?;
 
-        expr
+        Ok(expr)
     }
 
     fn or(&mut self) -> Result<Expr, ParseError> {
-        let mut expr = self.and();
+        let mut expr = self.and()?;
 
-        expr
+        while self.matches(&[TT::Keyword("or".into())]) {
+            let operator = self.previous();
+            let right = self.and()?;
+            expr = Expr::Logical(Logical {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            });
+        }
+
+        Ok(expr)
     }
 
     fn and(&mut self) -> Result<Expr, ParseError> {
-        let mut expr = self.equality();
+        let mut expr = self.equality()?;
 
-        expr
+        while self.matches(&[TT::Keyword("and".into())]) {
+            let operator = self.previous();
+            let right = self.equality()?;
+            expr = Expr::Logical(Logical {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            });
+        }
+
+        Ok(expr)
     }
 
     fn equality(&mut self) -> Result<Expr, ParseError> {
-        let mut expr = self.comparison();
+        let mut expr = self.comparison()?;
 
-        expr
+        while self.matches(&[
+            TT::Operator(Op::EqualEquals),
+            TT::Operator(Op::NotEquals),
+            TT::Keyword("is".into()),
+        ]) {
+            let operator = self.previous();
+            let right = self.comparison()?;
+            expr = Expr::Logical(Logical {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            });
+        }
+
+        Ok(expr)
     }
 
     fn comparison(&mut self) -> Result<Expr, ParseError> {
-        let mut expr = self.term();
+        let mut expr = self.term()?;
 
-        expr
+        while self.matches(&[
+            TT::Operator(Op::LesserEqual),
+            TT::Operator(Op::GreaterEqual),
+            TT::Operator(Op::GreaterThan),
+            TT::Operator(Op::LesserThan),
+        ]) {
+            let operator = self.previous();
+            let right = self.term()?;
+            expr = Expr::Logical(Logical {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            })
+        }
+
+        Ok(expr)
     }
 
     fn term(&mut self) -> Result<Expr, ParseError> {
@@ -208,7 +270,7 @@ impl Parser {
     }
 
     fn factor(&mut self) -> Result<Expr, ParseError> {
-        let mut expr = self.unary()?;
+        let mut expr = self.modulo()?;
 
         while self.matches(&[TT::Operator(Op::Multiply), TT::Operator(Op::Divide)]) {
             let operator = self.previous();
@@ -223,8 +285,24 @@ impl Parser {
         Ok(expr)
     }
 
+    fn modulo(&mut self) -> Result<Expr, ParseError> {
+        let mut expr = self.unary()?;
+
+        while self.matches(&[TT::Operator(Op::Remainder)]) {
+            let operator = self.previous();
+            let right = self.modulo()?;
+            expr = Expr::Binary(Binary {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            });
+        }
+
+        Ok(expr)
+    }
+
     fn unary(&mut self) -> Result<Expr, ParseError> {
-        if self.matches(&[TT::Keyword("not".into())]) {
+        if self.matches(&[TT::Operator(Op::Not), TT::Operator(Op::Subtract)]) {
             let operator = self.previous();
             let right = self.unary()?;
             Ok(Expr::Unary(Unary {
@@ -232,80 +310,133 @@ impl Parser {
                 right: Box::new(right),
             }))
         } else {
-            self.call()
+            self.index()
         }
     }
 
-    fn call(&mut self) -> Result<Expr, ParseError> {
-        let mut expr = self.primary()?;
+    fn index(&mut self) -> Result<Expr, ParseError> {
+        let mut expr = self.call()?;
+
+        if self.matches(&[TT::Ctrl("[".into())]) {
+            let value = self.expression()?;
+            self.consume(
+                &TT::Ctrl("]".into()),
+                "expected ']' after '[' and index value",
+            )?;
+            expr = Expr::Index(Index {
+                value: Box::new(value),
+            });
+        }
 
         Ok(expr)
     }
 
-    fn primary(&mut self) -> Result<Expr, ParseError> {
+    fn call(&mut self) -> Result<Expr, ParseError> {
+        let mut expr = self.target()?;
+
+        loop {
+            if self.matches(&[TT::Ctrl("(".into())]) {
+                expr = self.finish_call(expr)?;
+            } else {
+                break;
+            }
+        }
+
+        Ok(expr)
+    }
+
+    /// Handler for:
+    /// ID
+    /// ID ( params )
+    /// Literal
+    /// [ lists ]
+    /// ( groupings )
+    /// cexpr . ID
+    /// cexpr . ID ( params )
+    /// cexpr [ expr ]
+    fn target(&mut self) -> Result<Expr, ParseError> {
         self.advance();
 
         match self.previous().token {
             // TT::Keyword(_) => todo!(),
-            TT::Ctrl(c) => match c.as_str() {
-                "(" => {
+            TT::Ctrl(c) => {
+                if c == "(" {
                     let expr = self.expression()?;
                     self.consume(&TT::Ctrl(")".into()), "Expected ')' after '('")?;
                     Ok(Expr::Grouping(Grouping {
                         expr: Box::new(expr),
                     }))
-                }
-
-                // list handling should be moved to stmts (will need to cover typecasting)
-                // typecasts could be handled here though....
-                "[" => {
-                    let mut list = vec![];
-
-                    while self.peek().token != TT::Ctrl("]".into()) && !self.end_of_program() {
-                        list.push(self.expression()?);
+                } else if c == "[" {
+                    let mut vexpr = vec![];
+                    if !self.check(&TT::Ctrl("]".into())) {
+                        loop {
+                            vexpr.push(self.expression()?);
+                            if !self.matches(&[TT::Ctrl(",".into())]) {
+                                break;
+                            }
+                        }
                     }
 
-                    self.consume(&TT::Ctrl("]".into()), "Expected ']' after '['")?;
-                    Ok(Expr::Literal(Literal::List(list)))
-                }
-                _ => Err(ParseError::GenericError {
-                    message: "unknown errors".into(),
-                    help: "idk my bff jill".into(),
-                    span: self.previous().span,
-                }),
-            },
+                    self.consume(&TT::Ctrl("]".into()), "expected ']' after '[")?;
 
-            // TT::Operator(_) => todo!(),
-            TT::Value(literal) => match literal {
-                TLiteral::Num(n) => Ok(Expr::Literal(Literal::Number(n))),
-                TLiteral::Str(s) => Ok(Expr::Literal(Literal::String(s))),
-                TLiteral::Boolean(b) => Ok(if b {
-                    Expr::Literal(Literal::True)
+                    Ok(Expr::Literal(Literal::List(vexpr)))
                 } else {
-                    Expr::Literal(Literal::False)
-                }),
-                // TLiteral::List(_) => todo!(), // this one tricky???
-                // opting to handle Lists from Ctrl("[")
-                TLiteral::None => Ok(Expr::Literal(Literal::None)),
-                TLiteral::Empty => Ok(Expr::Literal(Literal::Empty)),
-                _ => Err(ParseError::GenericError {
-                    message: "invalid literal".into(),
-                    help: "idk my bff jill".into(),
-                    span: self.previous().span,
-                }),
-            },
-            // TT::Indent(_) => todo!(), // scope indicator
-            // TT::Dedent(_) => todo!(), // scope delineator
+                    Err(ParseError::GenericError {
+                        message: "unexpected token".into(),
+                        help: "idk".into(),
+                        span: self.previous().span,
+                    })
+                }
+            }
+            // TT::Operator(_) => todo!(),
+            TT::Value(v) => Ok(match v {
+                TLiteral::Num(n) => Expr::Literal(Literal::Number(n)),
+                TLiteral::Str(s) => Expr::Literal(Literal::String(s)),
+                TLiteral::Boolean(b) => {
+                    if b {
+                        Expr::Literal(Literal::True)
+                    } else {
+                        Expr::Literal(Literal::False)
+                    }
+                }
+                // TLiteral::List(l) => todo!(),
+                TLiteral::None => Expr::Literal(Literal::None),
+                TLiteral::Empty => Expr::Literal(Literal::Empty),
+            }),
+            // TT::Indent => todo!(),
+            // TT::Dedent => todo!(),
             TT::Identifier(_) => Ok(Expr::Variable(Variable {
                 name: self.previous(),
             })),
-            // TT::Type(_) => Ok(Expr::Type(Type {
-            // name: self.previous(),
-            // })),
             // TT::Eof => todo!(),
             // TT::Newline => todo!(),
-            _ => Ok(Expr::Literal(Literal::Eol)),
+            _ => Err(ParseError::GenericError {
+                message: "unexpected token".into(),
+                help: "idk".into(),
+                span: self.previous().span,
+            }),
         }
+    }
+
+    fn finish_call(&mut self, expr: Expr) -> Result<Expr, ParseError> {
+        let mut args = vec![];
+
+        if !self.check(&TT::Ctrl(")".into())) {
+            loop {
+                args.push(self.expression()?);
+                if !self.matches(&[TT::Ctrl(",".into())]) {
+                    break;
+                }
+            }
+        }
+
+        let paren = self.consume(&TT::Ctrl(")".into()), "Expect ')' after function call")?;
+
+        Ok(Expr::Call(Call {
+            callee: Box::new(expr),
+            paren,
+            args,
+        }))
     }
 
     // helper functions
