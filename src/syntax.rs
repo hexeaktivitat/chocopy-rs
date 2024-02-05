@@ -128,6 +128,7 @@ pub enum Stmt {
     Expression(Expression),
     Block(Block),
     If(If),
+    Return(Return),
     Print(Print),
 }
 
@@ -167,6 +168,12 @@ pub struct If {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct Return {
+    pub keyword: Token,
+    pub value: Option<Box<Expr>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Print {
     pub expr: Expr,
 }
@@ -177,6 +184,7 @@ pub trait StmtVisitor<T, S> {
     fn visit_expression(&mut self, x: &Expression, state: S) -> T;
     fn visit_block(&mut self, x: &Block, state: S) -> T;
     fn visit_if(&mut self, x: &If, state: S) -> T;
+    fn visit_return(&mut self, x: &Return, state: S) -> T;
     fn visit_print(&mut self, x: &Print, state: S) -> T;
 }
 
@@ -187,6 +195,58 @@ pub fn walk_stmt<T, S>(mut visitor: impl StmtVisitor<T, S>, x: &Stmt, state: S) 
         Stmt::Expression(y) => visitor.visit_expression(y, state),
         Stmt::Block(y) => visitor.visit_block(y, state),
         Stmt::If(y) => visitor.visit_if(y, state),
+        Stmt::Return(y) => visitor.visit_return(y, state),
         Stmt::Print(y) => visitor.visit_print(y, state),
+    }
+}
+
+impl std::fmt::Display for Expr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Expr::Literal(Literal::Number(n)) => n.fmt(f),
+            Expr::Literal(Literal::String(s)) => s.fmt(f),
+            Expr::Literal(Literal::False) => false.fmt(f),
+            Expr::Literal(Literal::None) => f.write_str("None"),
+            Expr::Literal(Literal::Empty) => f.write_str("Empty"),
+            Expr::Literal(Literal::Eol) => f.write_str("End of line"),
+            Expr::Literal(Literal::True) => true.fmt(f),
+            Expr::Literal(Literal::List(l)) => f.write_fmt(format_args!("{:?}", l)),
+            Expr::Logical(l) => f.write_fmt(format_args!("{} {} {}", l.left, l.operator, l.right)),
+            Expr::Variable(v) => v.name.fmt(f),
+            Expr::Assign(a) => f.write_fmt(format_args!("{} = {}", a.name, a.value)),
+            Expr::Unary(Unary { operator, right }) => {
+                f.write_fmt(format_args!("{}{}", operator, right))
+            }
+            Expr::Call(c) => c.callee.fmt(f),
+            Expr::Binary(Binary {
+                left,
+                operator,
+                right,
+            }) => f.write_fmt(format_args!("({} {} {})", left, operator, right)),
+            Expr::Grouping(Grouping { expr }) => f.write_fmt(format_args!("({:?})", expr)),
+            Expr::Identifier(i) => f.write_fmt(format_args!("{}", i.name.token)),
+            Expr::Type(t) => f.write_fmt(format_args!("{}", t.name.token)),
+            Expr::Index(i) => f.write_fmt(format_args!("{}", i.value)),
+        }
+    }
+}
+
+impl std::fmt::Display for Stmt {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Stmt::Block(bl) => f.write_fmt(format_args!("{:?}", bl.scope)),
+            Stmt::Expression(ex) => ex.expr.fmt(f),
+            Stmt::If(if_) => f.write_fmt(format_args!(
+                "{} then {} else {}",
+                if_.condition,
+                if_.then_branch,
+                if_.else_branch.as_ref().unwrap(),
+            )),
+            Stmt::Func(func) => f.write_fmt(format_args!("function {}", func.name.token)),
+            Stmt::Print(pr) => pr.expr.fmt(f),
+            Stmt::Return(re) => re.keyword.fmt(f),
+            Stmt::Var(va) => va.name.fmt(f),
+            // Stmt::While(wh) => f.write_fmt(format_args!("while {}", wh.condition)),
+        }
     }
 }

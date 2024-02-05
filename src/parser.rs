@@ -92,8 +92,8 @@ impl Parser {
     fn declaration(&mut self) -> Result<Stmt, ParseError> {
         let res = if self.matches(&[TT::Keyword("def".into())]) {
             self.declare_func()
-        } else if matches!(self.previous().token, TT::Identifier(_))
-            && self.peek().token == TT::Ctrl(":".into())
+        } else if matches!(self.tokens[self.current].token, TT::Identifier(_))
+            && self.tokens[self.current + 1].token == TT::Ctrl(":".into())
         {
             self.declare_variable()
         } else {
@@ -133,13 +133,25 @@ impl Parser {
 
                 self.consume(&TT::Ctrl(":".into()), "expected type for param")?;
 
-                param_types.push(
-                    self.consume(
+                if self.peek().token == TT::Ctrl("[".into()) {
+                    self.consume(&TT::Ctrl("[".into()), "expected '[' for list type")?;
+                    param_types.push(self.consume(
                         &|t: &Token| matches!(t.token, TT::Identifier(_)),
-                        "expected parameter type",
-                    )?
-                    .clone(),
-                );
+                        "expected list type",
+                    )?);
+                    self.consume(
+                        &TT::Ctrl("]".into()),
+                        "expected ']' after '[' for list type",
+                    )?;
+                } else {
+                    param_types.push(
+                        self.consume(
+                            &|t: &Token| matches!(t.token, TT::Identifier(_)),
+                            "expected parameter type",
+                        )?
+                        .clone(),
+                    );
+                }
 
                 if !self.matches(&[TT::Ctrl(",".into())]) {
                     break;
@@ -162,9 +174,16 @@ impl Parser {
             None
         };
 
+        self.consume(
+            &TT::Ctrl(":".into()),
+            "expected ':' after function definition",
+        )?;
+
         self.consume(&TT::Newline, "expected newline after function declaration")?;
 
         let body = self.block()?;
+
+        self.consume(&TT::Newline, "expected newline after function block")?;
 
         Ok(Stmt::Func(Func {
             name,
@@ -179,16 +198,30 @@ impl Parser {
     }
 
     fn declare_variable(&mut self) -> Result<Stmt, ParseError> {
-        let name = self.previous();
+        let name = self.consume(
+            &|t: &Token| matches!(t.token, TT::Identifier(_)),
+            "expected variable identifier",
+        )?;
+
         self.consume(
             &TT::Ctrl(":".into()),
             "expected : for type declaration after var name",
         )?;
 
-        let type_id = self.consume(
-            &|t: &Token| matches!(t.token, TT::Identifier(_)),
-            "Expected type name",
-        )?;
+        let type_id = if self.peek().token == TT::Ctrl("[".into()) {
+            self.consume(&TT::Ctrl("[".into()), "expected '[' for list type")?;
+            let t = self.consume(
+                &|t: &Token| matches!(t.token, TT::Identifier(_)),
+                "expected type ID",
+            )?;
+            self.consume(&TT::Ctrl("]".into()), "expected ']' after '[']")?;
+            t
+        } else {
+            self.consume(
+                &|t: &Token| matches!(t.token, TT::Identifier(_)),
+                "Expected type name",
+            )?
+        };
 
         let mut initializer = Expr::Literal(Literal::None);
         if self.matches(&[TT::Operator(Op::Equals)]) {
@@ -207,13 +240,16 @@ impl Parser {
     // statements
 
     fn statement(&mut self) -> Result<Stmt, ParseError> {
-        if self.matches(&[TT::Newline]) {
+        let res = if self.matches(&[TT::Indent]) {
             self.block()
         } else if self.matches(&[TT::Keyword("if".into())]) {
             self.if_statement()
+        } else if self.matches(&[TT::Keyword("return".into())]) {
+            self.return_statement()
         } else {
             self.expression_statement()
-        }
+        };
+        res
     }
 
     fn block(&mut self) -> Result<Stmt, ParseError> {
@@ -279,16 +315,53 @@ impl Parser {
         }))
     }
 
+    fn return_statement(&mut self) -> Result<Stmt, ParseError> {
+        let keyword = self.previous().clone();
+        let value = if self.check(&TT::Newline) {
+            self.consume(&TT::Newline, "expected newline after return statement")?;
+            None
+        } else {
+            Some(self.expression()?)
+        };
+
+        self.consume(&TT::Newline, "expected newline after return statement")?;
+
+        Ok(Stmt::Return(Return {
+            keyword,
+            value: value.map(Box::new),
+        }))
+    }
+
     fn expression_statement(&mut self) -> Result<Stmt, ParseError> {
         let expr = self.expression()?;
-        self.consume(&TT::Newline, "Expected newline")?;
+        self.consume(&TT::Newline, "Expected newline after expr")?;
         Ok(Stmt::Expression(Expression { expr }))
     }
 
     // expressions
 
     fn expression(&mut self) -> Result<Expr, ParseError> {
-        self.cexpr()
+        self.assignment()
+    }
+
+    fn assignment(&mut self) -> Result<Expr, ParseError> {
+        let expr = self.cexpr()?;
+
+        if self.matches(&[TT::Operator(Op::Equals)]) {
+            let _equals = self.previous();
+            let value = self.assignment()?;
+            if let Expr::Variable(v) = expr {
+                let name = v.name;
+                Ok(Expr::Assign(Assign {
+                    name,
+                    value: Box::new(value),
+                }))
+            } else {
+                Ok(expr)
+            }
+        } else {
+            Ok(expr)
+        }
     }
 
     /// handles:
@@ -510,8 +583,8 @@ impl Parser {
                     Ok(Expr::Literal(Literal::List(vexpr)))
                 } else {
                     Err(ParseError::UnexpectedToken {
-                        help: "idk".into(),
-                        span: self.previous().span,
+                        help: "tried to match '(' or '[' and failed".into(),
+                        span: self.tokens[self.current].span,
                     })
                 }
             }
@@ -536,10 +609,9 @@ impl Parser {
                 name: self.previous(),
             })),
             // TT::Eof => todo!(),
-            // TT::Newline => todo!(),
             _ => Err(ParseError::UnexpectedToken {
                 help: "terminal parse resulted in null token".into(),
-                span: self.previous().span,
+                span: self.tokens[self.current].span,
             }),
         }
     }
@@ -591,7 +663,7 @@ impl Parser {
         } else {
             Err(ParseError::AlternateToken {
                 help: message.into(),
-                span: self.previous().span,
+                span: self.tokens[self.current].span,
             })
         }
     }

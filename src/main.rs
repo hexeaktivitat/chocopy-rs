@@ -43,11 +43,11 @@ fn main() -> Result<()> {
         source_code: String::from_utf8(code.to_owned()).unwrap(),
         related: err_list,
     })?;
-
-    for t in tokens.clone() {
-        println!("{}", t);
-    }
-
+    /*
+        for t in tokens.clone() {
+            println!("{}", t);
+        }
+    */
     let mut parser = Parser::new(tokens);
 
     let result = parser.parse().map_err(|err_list| ParseErrors {

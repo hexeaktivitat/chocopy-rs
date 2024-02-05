@@ -90,6 +90,27 @@ impl<'a> Lexer<'a> {
         // current char location in the source code (for spans)
         self.start = self.current;
 
+        if self.indent_flag {
+            self.indent_flag = false;
+            let mut indentation = 0;
+
+            while self.match_next(b' ') {
+                indentation += 1;
+            }
+
+            if &indentation > self.indent.last().unwrap() {
+                self.indent.push(indentation);
+                return Ok(Some(TokenType::Indent));
+            } else if &indentation < self.indent.last().unwrap() {
+                while &indentation < self.indent.last().unwrap() {
+                    self.indent.pop();
+                }
+                return Ok(Some(TokenType::Dedent));
+            } else {
+                return Ok(None);
+            }
+        }
+
         match self.advance() {
             // single characters to start with
             // control characters
@@ -108,36 +129,15 @@ impl<'a> Lexer<'a> {
                 while !self.match_next(b'\n') && !self.end_of_code() {
                     self.advance();
                 }
-                Ok(None)
+                self.line += 1;
+                self.indent_flag = true;
+                Ok(Some(TokenType::Newline))
             }
 
             // significant whitespace
             // space handling for indent / dedent may be better to do in a different place
             // b' ' => Ok(Some(TokenType::Indent(self.indent + 1))),
-            b' ' | b'\t' => {
-                if self.indent_flag {
-                    self.indent_flag = false;
-                    let mut indentation = 0;
-
-                    while self.match_next(b' ') {
-                        indentation += 1;
-                    }
-
-                    if &indentation > self.indent.last().unwrap() {
-                        self.indent.push(indentation);
-                        Ok(Some(TokenType::Indent))
-                    } else if &indentation < self.indent.last().unwrap() {
-                        while &indentation < self.indent.last().unwrap() {
-                            self.indent.pop();
-                        }
-                        Ok(Some(TokenType::Dedent))
-                    } else {
-                        Ok(None)
-                    }
-                } else {
-                    Ok(None)
-                }
-            }
+            b' ' | b'\t' => Ok(None),
             b'\n' | b'\r' => {
                 self.line += 1;
                 self.indent_flag = true;
