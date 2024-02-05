@@ -59,7 +59,7 @@ fn main() -> Result<()> {
     println!("\nPARSE\n=====");
 
     for r in result {
-        println!("{:?}", r);
+        println!("{:#?}", r);
     }
 
     Ok(())
