@@ -242,10 +242,17 @@ impl std::fmt::Display for Stmt {
                 if_.then_branch,
                 if_.else_branch.as_ref().unwrap(),
             )),
-            Stmt::Func(func) => f.write_fmt(format_args!("function {}", func.name.token)),
+            Stmt::Func(func) => f.write_fmt(format_args!(
+                "function {} | {}\n",
+                func.name.token,
+                func.type_id.as_ref().unwrap().token,
+            )),
             Stmt::Print(pr) => pr.expr.fmt(f),
             Stmt::Return(re) => re.keyword.fmt(f),
-            Stmt::Var(va) => va.name.fmt(f),
+            Stmt::Var(va) => f.write_fmt(format_args!(
+                "variable {} | {}",
+                va.name.token, va.type_id.token
+            )),
             // Stmt::While(wh) => f.write_fmt(format_args!("while {}", wh.condition)),
         }
     }

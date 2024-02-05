@@ -56,7 +56,7 @@ fn main() -> Result<()> {
     })?;
 
     for r in result {
-        println!("{:?}", r);
+        println!("{}", r);
     }
 
     Ok(())
