@@ -348,9 +348,11 @@ impl Parser {
         let expr = self.cexpr()?;
 
         if self.matches(&[TT::Operator(Op::Equals)]) {
+            println!("accessed assignment with {:?}", expr);
             let _equals = self.previous();
             let value = self.assignment()?;
-            if let Expr::Variable(v) = expr {
+            println!("value is: {:?}", value);
+            if let Expr::Identifier(v) = expr {
                 let name = v.name;
                 Ok(Expr::Assign(Assign {
                     name,
@@ -568,14 +570,23 @@ impl Parser {
                         expr: Box::new(expr),
                     }))
                 } else if c == "[" {
+                    println!("accessed the list constructor with {}", c);
+                    println!(
+                        "current token: {} | next token {}",
+                        self.previous(),
+                        self.peek()
+                    );
                     let mut vexpr = vec![];
                     if !self.check(&TT::Ctrl("]".into())) {
                         loop {
                             vexpr.push(self.expression()?);
+                            println!("adding {} to vexpr", vexpr.last().unwrap());
                             if !self.matches(&[TT::Ctrl(",".into())]) {
                                 break;
                             }
                         }
+                    } else {
+                        vexpr.push(Expr::Literal(Literal::Empty));
                     }
 
                     self.consume(&TT::Ctrl("]".into()), "expected ']' after '[")?;

@@ -44,6 +44,7 @@ fn main() -> Result<()> {
         related: err_list,
     })?;
 
+    println!("TOKENS\n======");
     for t in tokens.clone() {
         println!("{}", t);
     }
@@ -55,8 +56,10 @@ fn main() -> Result<()> {
         related: err_list,
     })?;
 
+    println!("\nPARSE\n=====");
+
     for r in result {
-        println!("{}", r);
+        println!("{:?}", r);
     }
 
     Ok(())
