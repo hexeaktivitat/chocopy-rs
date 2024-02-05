@@ -137,8 +137,8 @@ impl<'a> Lexer<'a> {
             // significant whitespace
             // space handling for indent / dedent may be better to do in a different place
             // b' ' => Ok(Some(TokenType::Indent(self.indent + 1))),
-            b' ' | b'\t' => Ok(None),
-            b'\n' | b'\r' => {
+            b' ' | b'\t' | b'\r' => Ok(None),
+            b'\n' => {
                 self.line += 1;
                 self.indent_flag = true;
                 Ok(Some(TokenType::Newline))
