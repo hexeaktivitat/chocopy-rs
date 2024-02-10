@@ -11,6 +11,7 @@ mod lexer;
 mod parser;
 mod syntax;
 mod token;
+mod typecheck;
 
 #[derive(Error, Debug, Diagnostic)]
 #[error("multiple errors encountered")]

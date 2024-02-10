@@ -16,7 +16,6 @@ pub enum Expr {
     Grouping(Grouping),
     Call(Call),
     Variable(Variable),
-    Type(Type),
     Index(Index),
 }
 
@@ -82,11 +81,6 @@ pub struct Variable {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Type {
-    pub name: Token,
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub struct Index {
     pub value: Box<Expr>,
 }
@@ -101,7 +95,6 @@ pub trait ExprVisitor<T, S> {
     fn visit_logical(&mut self, x: &Logical, state: S) -> T;
     fn visit_grouping(&mut self, x: &Grouping, state: S) -> T;
     fn visit_call(&mut self, x: &Call, state: S) -> T;
-    fn visit_type(&mut self, x: &Type, state: S) -> T;
     fn visit_index(&mut self, x: &Index, state: S) -> T;
 }
 
@@ -116,7 +109,6 @@ pub fn walk_expr<T, S>(mut visitor: impl ExprVisitor<T, S>, x: &Expr, state: S) 
         Expr::Logical(y) => visitor.visit_logical(y, state),
         Expr::Grouping(y) => visitor.visit_grouping(y, state),
         Expr::Call(y) => visitor.visit_call(y, state),
-        Expr::Type(y) => visitor.visit_type(y, state),
         Expr::Index(y) => visitor.visit_index(y, state),
     }
 }
@@ -225,7 +217,6 @@ impl std::fmt::Display for Expr {
             }) => f.write_fmt(format_args!("({} {} {})", left, operator, right)),
             Expr::Grouping(Grouping { expr }) => f.write_fmt(format_args!("({:?})", expr)),
             Expr::Identifier(i) => f.write_fmt(format_args!("{}", i.name.token)),
-            Expr::Type(t) => f.write_fmt(format_args!("{}", t.name.token)),
             Expr::Index(i) => f.write_fmt(format_args!("{}", i.value)),
         }
     }
