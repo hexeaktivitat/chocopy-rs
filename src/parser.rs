@@ -164,12 +164,11 @@ impl Parser {
             "expected ')' after function parameters",
         )?;
 
+        // need to revisit logic here
+
         let type_id = if self.peek().token == TT::Ctrl("->".into()) {
             self.consume(&TT::Ctrl("->".into()), "this shouldn't fail")?;
-            Some(self.consume(
-                &|t: &Token| matches!(t.token, TT::Identifier(_)),
-                "expected return type after function decl",
-            )?)
+            Some(self.expression()?)
         } else {
             None
         };
@@ -191,9 +190,10 @@ impl Parser {
             parameters: params,
             param_types,
             body: match body {
-                Stmt::Block(Block { scope }) => scope,
+                Stmt::Block(Block { scope, typed: None }) => scope,
                 _ => unreachable!("somehow this was reached"),
             },
+            typed: None,
         }))
     }
 
@@ -208,20 +208,15 @@ impl Parser {
             "expected : for type declaration after var name",
         )?;
 
-        let type_id = if self.peek().token == TT::Ctrl("[".into()) {
-            self.consume(&TT::Ctrl("[".into()), "expected '[' for list type")?;
-            let t = self.consume(
-                &|t: &Token| matches!(t.token, TT::Identifier(_)),
-                "expected type ID",
-            )?;
-            self.consume(&TT::Ctrl("]".into()), "expected ']' after '[']")?;
-            t
-        } else {
-            self.consume(
-                &|t: &Token| matches!(t.token, TT::Identifier(_)),
-                "Expected type name",
-            )?
-        };
+        // need to revisit logic here
+
+        let type_id = match self.expression() {
+            Ok(expr) => Ok(expr),
+            Err(_) => Err(ParseError::UnexpectedToken {
+                help: "expected type declaration after variable declaration".into(),
+                span: self.tokens[self.current].span,
+            }),
+        }?;
 
         let mut initializer = Expr::Literal(Literal::None);
         if self.matches(&[TT::Operator(Op::Equals)]) {
@@ -234,6 +229,7 @@ impl Parser {
             name,
             type_id,
             initializer: Some(Box::new(initializer)),
+            typed: None,
         }))
     }
 
@@ -265,7 +261,7 @@ impl Parser {
         }
         self.consume(&TT::Dedent, "Expected dedentation after statement block")?;
 
-        Ok(Stmt::Block(Block { scope }))
+        Ok(Stmt::Block(Block { scope, typed: None }))
     }
 
     fn if_statement(&mut self) -> Result<Stmt, ParseError> {
@@ -312,6 +308,7 @@ impl Parser {
             elif_condition,
             elif_branch,
             else_branch,
+            typed: None,
         }))
     }
 
@@ -329,13 +326,14 @@ impl Parser {
         Ok(Stmt::Return(Return {
             keyword,
             value: value.map(Box::new),
+            typed: None,
         }))
     }
 
     fn expression_statement(&mut self) -> Result<Stmt, ParseError> {
         let expr = self.expression()?;
         self.consume(&TT::Newline, "Expected newline after expr")?;
-        Ok(Stmt::Expression(Expression { expr }))
+        Ok(Stmt::Expression(Expression { expr, typed: None }))
     }
 
     // expressions
@@ -355,6 +353,7 @@ impl Parser {
                 Ok(Expr::Assign(Assign {
                     name,
                     value: Box::new(value),
+                    typed: None,
                 }))
             } else {
                 Ok(expr)
@@ -391,6 +390,7 @@ impl Parser {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
+                typed: None,
             });
         }
 
@@ -407,6 +407,7 @@ impl Parser {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
+                typed: None,
             });
         }
 
@@ -427,6 +428,7 @@ impl Parser {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
+                typed: None,
             });
         }
 
@@ -448,6 +450,7 @@ impl Parser {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
+                typed: None,
             })
         }
 
@@ -464,6 +467,7 @@ impl Parser {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
+                typed: None,
             });
         }
 
@@ -480,6 +484,7 @@ impl Parser {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
+                typed: None,
             });
         }
 
@@ -496,6 +501,7 @@ impl Parser {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
+                typed: None,
             });
         }
 
@@ -509,6 +515,7 @@ impl Parser {
             Ok(Expr::Unary(Unary {
                 operator,
                 right: Box::new(right),
+                typed: None,
             }))
         } else {
             self.index()
@@ -526,6 +533,7 @@ impl Parser {
             )?;
             expr = Expr::Index(Index {
                 value: Box::new(value),
+                typed: None,
             });
         }
 
@@ -566,6 +574,7 @@ impl Parser {
                     self.consume(&TT::Ctrl(")".into()), "Expected ')' after '('")?;
                     Ok(Expr::Grouping(Grouping {
                         expr: Box::new(expr),
+                        typed: None,
                     }))
                 } else if c == "[" {
                     let mut vexpr = vec![];
@@ -636,6 +645,7 @@ impl Parser {
             callee: Box::new(expr),
             paren,
             args,
+            typed: None,
         }))
     }
 

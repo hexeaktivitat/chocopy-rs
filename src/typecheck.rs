@@ -1,15 +1,4 @@
-use crate::syntax::{Expr, ExprVisitor, Stmt, StmtVisitor};
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Type {
-    None,
-    Empty,
-    Bool,
-    Num,
-    String,
-    List(Box<Type>),
-    Id(String),
-}
+use crate::syntax::*;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeChecker {

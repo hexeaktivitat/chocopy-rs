@@ -3,6 +3,25 @@ use crate::token::Token;
 // syntax tree here we go oh god
 // manual implementation so I understand wtf is going on
 
+// Type information
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Typed {
+    Assigned(Type),
+    Inferred(Type),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Type {
+    None,
+    Empty,
+    Bool,
+    Num,
+    Str,
+    List(Box<Type>),
+    Id(String),
+}
+
 // Expressions
 
 #[derive(Debug, Clone, PartialEq)]
@@ -35,6 +54,7 @@ pub enum Literal {
 pub struct Unary {
     pub operator: Token,
     pub right: Box<Expr>,
+    pub typed: Option<Typed>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -42,17 +62,20 @@ pub struct Binary {
     pub left: Box<Expr>,
     pub operator: Token,
     pub right: Box<Expr>,
+    pub typed: Option<Typed>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Identifier {
     pub name: Token,
+    // pub typed: Option<Typed>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Assign {
     pub name: Token,
     pub value: Box<Expr>,
+    pub typed: Option<Typed>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -60,11 +83,13 @@ pub struct Logical {
     pub left: Box<Expr>,
     pub operator: Token,
     pub right: Box<Expr>,
+    pub typed: Option<Typed>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Grouping {
     pub expr: Box<Expr>,
+    pub typed: Option<Typed>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -72,17 +97,20 @@ pub struct Call {
     pub callee: Box<Expr>,
     pub paren: Token,
     pub args: Vec<Expr>,
+    pub typed: Option<Typed>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Variable {
     pub name: Token,
-    pub type_id: Token,
+    pub type_id: Box<Expr>,
+    pub typed: Option<Typed>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Index {
     pub value: Box<Expr>,
+    pub typed: Option<Typed>,
 }
 
 pub trait ExprVisitor<T, S> {
@@ -127,27 +155,31 @@ pub enum Stmt {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Var {
     pub name: Token,
-    pub type_id: Token,
+    pub type_id: Expr,
     pub initializer: Option<Box<Expr>>,
+    pub typed: Option<Typed>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Func {
     pub name: Token,
-    pub type_id: Option<Token>,
+    pub type_id: Option<Expr>,
     pub parameters: Vec<Token>,
     pub param_types: Vec<Token>,
     pub body: Vec<Stmt>,
+    pub typed: Option<Typed>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Expression {
     pub expr: Expr,
+    pub typed: Option<Typed>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Block {
     pub scope: Vec<Stmt>,
+    pub typed: Option<Typed>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -157,17 +189,20 @@ pub struct If {
     pub elif_condition: Vec<Option<Expr>>,
     pub elif_branch: Vec<Option<Stmt>>,
     pub else_branch: Option<Box<Stmt>>,
+    pub typed: Option<Typed>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Return {
     pub keyword: Token,
     pub value: Option<Box<Expr>>,
+    pub typed: Option<Typed>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Print {
     pub expr: Expr,
+    pub typed: Option<Typed>,
 }
 
 pub trait StmtVisitor<T, S> {
@@ -206,16 +241,19 @@ impl std::fmt::Display for Expr {
             Expr::Logical(l) => f.write_fmt(format_args!("{} {} {}", l.left, l.operator, l.right)),
             Expr::Variable(v) => v.name.fmt(f),
             Expr::Assign(a) => f.write_fmt(format_args!("{} = {}", a.name, a.value)),
-            Expr::Unary(Unary { operator, right }) => {
-                f.write_fmt(format_args!("{}{}", operator, right))
-            }
+            Expr::Unary(Unary {
+                operator,
+                right,
+                typed,
+            }) => f.write_fmt(format_args!("{}{}", operator, right)),
             Expr::Call(c) => c.callee.fmt(f),
             Expr::Binary(Binary {
                 left,
                 operator,
                 right,
+                typed,
             }) => f.write_fmt(format_args!("({} {} {})", left, operator, right)),
-            Expr::Grouping(Grouping { expr }) => f.write_fmt(format_args!("({:?})", expr)),
+            Expr::Grouping(Grouping { expr, typed }) => f.write_fmt(format_args!("({:?})", expr)),
             Expr::Identifier(i) => f.write_fmt(format_args!("{}", i.name.token)),
             Expr::Index(i) => f.write_fmt(format_args!("{}", i.value)),
         }
@@ -236,15 +274,13 @@ impl std::fmt::Display for Stmt {
             Stmt::Func(func) => f.write_fmt(format_args!(
                 "function {} | {}\n",
                 func.name.token,
-                func.type_id.as_ref().unwrap().token,
+                func.type_id.as_ref().unwrap(),
             )),
             Stmt::Print(pr) => pr.expr.fmt(f),
             Stmt::Return(re) => re.keyword.fmt(f),
-            Stmt::Var(va) => f.write_fmt(format_args!(
-                "variable {} | {}",
-                va.name.token, va.type_id.token
-            )),
-            // Stmt::While(wh) => f.write_fmt(format_args!("while {}", wh.condition)),
+            Stmt::Var(va) => {
+                f.write_fmt(format_args!("variable {} | {}", va.name.token, va.type_id))
+            } // Stmt::While(wh) => f.write_fmt(format_args!("while {}", wh.condition)),
         }
     }
 }
