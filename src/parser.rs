@@ -6,17 +6,6 @@ use crate::token::{Literal as TLiteral, Op, Token, TokenType as TT};
 
 #[derive(Error, Debug, Diagnostic)]
 pub enum ParseError {
-    #[error("Generic error thrown")]
-    // #[error()]
-    #[diagnostic(code(parser::generic_error))]
-    GenericError {
-        message: String,
-        #[help]
-        help: String,
-        #[label]
-        span: SourceSpan,
-    },
-
     #[error("Unexpected token")]
     UnexpectedToken {
         #[help]
