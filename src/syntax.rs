@@ -68,7 +68,7 @@ pub struct Binary {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Identifier {
     pub name: Token,
-    // pub typed: Option<Typed>,
+    pub typed: Option<Typed>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

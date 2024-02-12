@@ -206,6 +206,10 @@ impl Parser {
 
         let mut initializer = Expr::Literal(Literal::None, None);
         if self.matches(&[TT::Operator(Op::Equals)]) {
+            self.consume(
+                &TT::Operator(Op::Equals),
+                "expected '=' during variable decl",
+            )?;
             initializer = self.expression()?;
         }
 
@@ -604,6 +608,7 @@ impl Parser {
             // TT::Dedent => todo!(),
             TT::Identifier(_) => Ok(Expr::Identifier(Identifier {
                 name: self.previous(),
+                typed: None,
             })),
             // TT::Eof => todo!(),
             _ => Err(ParseError::UnexpectedToken {

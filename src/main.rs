@@ -55,37 +55,36 @@ fn main() -> Result<()> {
         source_code: String::from_utf8(code.to_owned()).unwrap(),
         related: err_list,
     })?;
-
-    println!("TOKENS\n======");
-    for t in tokens.clone() {
-        println!("{}", t);
-    }
-
+    /*
+        println!("TOKENS\n======");
+        for t in tokens.clone() {
+            println!("{}", t);
+        }
+    */
     let mut parser = Parser::new(tokens);
 
     let result = parser.parse().map_err(|err_list| ParseErrors {
         source_code: String::from_utf8(code.to_owned()).unwrap(),
         related: err_list,
     })?;
-
-    println!("\nPARSE\n=====");
-
-    for r in result.clone() {
-        println!("{:#?}", r);
-    }
-
+    /*
+        println!("\nPARSE\n=====");
+        for r in result.clone() {
+            println!("{:#?}", r);
+        }
+    */
     let mut type_checker = TypeChecker::new(&result);
 
     let typed_ast = type_checker.verify().map_err(|err_list| TypeErrors {
         source_code: String::from_utf8(code.to_owned()).unwrap(),
         related: err_list,
     })?;
+    /*
+        println!("\nTYPECHECK\n=========");
 
-    println!("\nTYPECHECK\n=========");
-
-    for ta in typed_ast.clone() {
-        println!("{:#?}", ta);
-    }
-
+        for ta in typed_ast.clone() {
+            println!("{:#?}", ta);
+        }
+    */
     Ok(())
 }
