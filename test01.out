@@ -1,0 +1,432 @@
+TOKENS
+======
+KEYWORD def: SourceSpan { offset: SourceOffset(0), length: 3 }
+IDENTIFIER is_zero: SourceSpan { offset: SourceOffset(4), length: 7 }
+CTRL (: SourceSpan { offset: SourceOffset(11), length: 1 }
+IDENTIFIER items: SourceSpan { offset: SourceOffset(12), length: 5 }
+CTRL :: SourceSpan { offset: SourceOffset(17), length: 1 }
+CTRL [: SourceSpan { offset: SourceOffset(19), length: 1 }
+IDENTIFIER int: SourceSpan { offset: SourceOffset(20), length: 3 }
+CTRL ]: SourceSpan { offset: SourceOffset(23), length: 1 }
+CTRL ,: SourceSpan { offset: SourceOffset(24), length: 1 }
+IDENTIFIER idx: SourceSpan { offset: SourceOffset(26), length: 3 }
+CTRL :: SourceSpan { offset: SourceOffset(29), length: 1 }
+IDENTIFIER int: SourceSpan { offset: SourceOffset(31), length: 3 }
+CTRL ): SourceSpan { offset: SourceOffset(34), length: 1 }
+CTRL ->: SourceSpan { offset: SourceOffset(36), length: 2 }
+IDENTIFIER bool: SourceSpan { offset: SourceOffset(39), length: 4 }
+CTRL :: SourceSpan { offset: SourceOffset(43), length: 1 }
+NEWLINE: SourceSpan { offset: SourceOffset(45), length: 1 }
+INDENT: SourceSpan { offset: SourceOffset(46), length: 4 }
+IDENTIFIER val: SourceSpan { offset: SourceOffset(50), length: 3 }
+CTRL :: SourceSpan { offset: SourceOffset(53), length: 1 }
+IDENTIFIER int: SourceSpan { offset: SourceOffset(54), length: 3 }
+OP EQUALS: SourceSpan { offset: SourceOffset(58), length: 1 }
+VALUE NUM: 0: SourceSpan { offset: SourceOffset(60), length: 1 }
+NEWLINE: SourceSpan { offset: SourceOffset(62), length: 31 }
+IDENTIFIER val: SourceSpan { offset: SourceOffset(97), length: 3 }
+OP EQUALS: SourceSpan { offset: SourceOffset(101), length: 1 }
+IDENTIFIER items: SourceSpan { offset: SourceOffset(103), length: 5 }
+CTRL [: SourceSpan { offset: SourceOffset(108), length: 1 }
+IDENTIFIER idx: SourceSpan { offset: SourceOffset(109), length: 3 }
+CTRL ]: SourceSpan { offset: SourceOffset(112), length: 1 }
+NEWLINE: SourceSpan { offset: SourceOffset(114), length: 1 }
+KEYWORD return: SourceSpan { offset: SourceOffset(119), length: 6 }
+IDENTIFIER val: SourceSpan { offset: SourceOffset(126), length: 3 }
+OP EQUAL EQUALS: SourceSpan { offset: SourceOffset(130), length: 2 }
+VALUE NUM: 0: SourceSpan { offset: SourceOffset(133), length: 1 }
+NEWLINE: SourceSpan { offset: SourceOffset(135), length: 1 }
+DEDENT: SourceSpan { offset: SourceOffset(136), length: 0 }
+NEWLINE: SourceSpan { offset: SourceOffset(137), length: 1 }
+IDENTIFIER mylist: SourceSpan { offset: SourceOffset(138), length: 6 }
+CTRL :: SourceSpan { offset: SourceOffset(144), length: 1 }
+CTRL [: SourceSpan { offset: SourceOffset(146), length: 1 }
+IDENTIFIER int: SourceSpan { offset: SourceOffset(147), length: 3 }
+CTRL ]: SourceSpan { offset: SourceOffset(150), length: 1 }
+OP EQUALS: SourceSpan { offset: SourceOffset(152), length: 1 }
+VALUE <NONE>: SourceSpan { offset: SourceOffset(154), length: 4 }
+NEWLINE: SourceSpan { offset: SourceOffset(159), length: 1 }
+IDENTIFIER mylist: SourceSpan { offset: SourceOffset(160), length: 6 }
+OP EQUALS: SourceSpan { offset: SourceOffset(167), length: 1 }
+CTRL [: SourceSpan { offset: SourceOffset(169), length: 1 }
+VALUE NUM: 1: SourceSpan { offset: SourceOffset(170), length: 1 }
+CTRL ,: SourceSpan { offset: SourceOffset(171), length: 1 }
+VALUE NUM: 0: SourceSpan { offset: SourceOffset(172), length: 1 }
+CTRL ,: SourceSpan { offset: SourceOffset(173), length: 1 }
+VALUE NUM: 1: SourceSpan { offset: SourceOffset(174), length: 1 }
+CTRL ]: SourceSpan { offset: SourceOffset(175), length: 1 }
+NEWLINE: SourceSpan { offset: SourceOffset(177), length: 1 }
+IDENTIFIER print: SourceSpan { offset: SourceOffset(178), length: 5 }
+CTRL (: SourceSpan { offset: SourceOffset(183), length: 1 }
+IDENTIFIER is_zero: SourceSpan { offset: SourceOffset(184), length: 7 }
+CTRL (: SourceSpan { offset: SourceOffset(191), length: 1 }
+IDENTIFIER mylist: SourceSpan { offset: SourceOffset(192), length: 6 }
+CTRL ,: SourceSpan { offset: SourceOffset(198), length: 1 }
+VALUE NUM: 1: SourceSpan { offset: SourceOffset(200), length: 1 }
+CTRL ): SourceSpan { offset: SourceOffset(201), length: 1 }
+CTRL ): SourceSpan { offset: SourceOffset(202), length: 1 }
+NEWLINE: SourceSpan { offset: SourceOffset(204), length: 17 }
+END OF FILE: SourceSpan { offset: SourceOffset(204), length: 17 }
+
+PARSE
+=====
+Func(
+    Func {
+        name: Token {
+            token: Identifier(
+                "is_zero",
+            ),
+            span: SourceSpan {
+                offset: SourceOffset(
+                    4,
+                ),
+                length: 7,
+            },
+        },
+        type_id: Some(
+            Token {
+                token: Identifier(
+                    "bool",
+                ),
+                span: SourceSpan {
+                    offset: SourceOffset(
+                        39,
+                    ),
+                    length: 4,
+                },
+            },
+        ),
+        parameters: [
+            Token {
+                token: Identifier(
+                    "items",
+                ),
+                span: SourceSpan {
+                    offset: SourceOffset(
+                        12,
+                    ),
+                    length: 5,
+                },
+            },
+            Token {
+                token: Identifier(
+                    "idx",
+                ),
+                span: SourceSpan {
+                    offset: SourceOffset(
+                        26,
+                    ),
+                    length: 3,
+                },
+            },
+        ],
+        param_types: [
+            Token {
+                token: Identifier(
+                    "int",
+                ),
+                span: SourceSpan {
+                    offset: SourceOffset(
+                        20,
+                    ),
+                    length: 3,
+                },
+            },
+            Token {
+                token: Identifier(
+                    "int",
+                ),
+                span: SourceSpan {
+                    offset: SourceOffset(
+                        31,
+                    ),
+                    length: 3,
+                },
+            },
+        ],
+        body: [
+            Var(
+                Var {
+                    name: Token {
+                        token: Identifier(
+                            "val",
+                        ),
+                        span: SourceSpan {
+                            offset: SourceOffset(
+                                50,
+                            ),
+                            length: 3,
+                        },
+                    },
+                    type_id: Token {
+                        token: Identifier(
+                            "int",
+                        ),
+                        span: SourceSpan {
+                            offset: SourceOffset(
+                                54,
+                            ),
+                            length: 3,
+                        },
+                    },
+                    initializer: Some(
+                        Literal(
+                            Number(
+                                0,
+                            ),
+                        ),
+                    ),
+                },
+            ),
+            Expression(
+                Expression {
+                    expr: Assign(
+                        Assign {
+                            name: Token {
+                                token: Identifier(
+                                    "val",
+                                ),
+                                span: SourceSpan {
+                                    offset: SourceOffset(
+                                        97,
+                                    ),
+                                    length: 3,
+                                },
+                            },
+                            value: Index(
+                                Index {
+                                    value: Identifier(
+                                        Identifier {
+                                            name: Token {
+                                                token: Identifier(
+                                                    "idx",
+                                                ),
+                                                span: SourceSpan {
+                                                    offset: SourceOffset(
+                                                        109,
+                                                    ),
+                                                    length: 3,
+                                                },
+                                            },
+                                        },
+                                    ),
+                                },
+                            ),
+                        },
+                    ),
+                },
+            ),
+            Return(
+                Return {
+                    keyword: Token {
+                        token: Keyword(
+                            "return",
+                        ),
+                        span: SourceSpan {
+                            offset: SourceOffset(
+                                119,
+                            ),
+                            length: 6,
+                        },
+                    },
+                    value: Some(
+                        Logical(
+                            Logical {
+                                left: Identifier(
+                                    Identifier {
+                                        name: Token {
+                                            token: Identifier(
+                                                "val",
+                                            ),
+                                            span: SourceSpan {
+                                                offset: SourceOffset(
+                                                    126,
+                                                ),
+                                                length: 3,
+                                            },
+                                        },
+                                    },
+                                ),
+                                operator: Token {
+                                    token: Operator(
+                                        EqualEquals,
+                                    ),
+                                    span: SourceSpan {
+                                        offset: SourceOffset(
+                                            130,
+                                        ),
+                                        length: 2,
+                                    },
+                                },
+                                right: Literal(
+                                    Number(
+                                        0,
+                                    ),
+                                ),
+                            },
+                        ),
+                    ),
+                },
+            ),
+        ],
+    },
+)
+Var(
+    Var {
+        name: Token {
+            token: Identifier(
+                "mylist",
+            ),
+            span: SourceSpan {
+                offset: SourceOffset(
+                    138,
+                ),
+                length: 6,
+            },
+        },
+        type_id: Token {
+            token: Identifier(
+                "int",
+            ),
+            span: SourceSpan {
+                offset: SourceOffset(
+                    147,
+                ),
+                length: 3,
+            },
+        },
+        initializer: Some(
+            Literal(
+                None,
+            ),
+        ),
+    },
+)
+Expression(
+    Expression {
+        expr: Assign(
+            Assign {
+                name: Token {
+                    token: Identifier(
+                        "mylist",
+                    ),
+                    span: SourceSpan {
+                        offset: SourceOffset(
+                            160,
+                        ),
+                        length: 6,
+                    },
+                },
+                value: Literal(
+                    List(
+                        [
+                            Literal(
+                                Number(
+                                    1,
+                                ),
+                            ),
+                            Literal(
+                                Number(
+                                    0,
+                                ),
+                            ),
+                            Literal(
+                                Number(
+                                    1,
+                                ),
+                            ),
+                        ],
+                    ),
+                ),
+            },
+        ),
+    },
+)
+Expression(
+    Expression {
+        expr: Call(
+            Call {
+                callee: Identifier(
+                    Identifier {
+                        name: Token {
+                            token: Identifier(
+                                "print",
+                            ),
+                            span: SourceSpan {
+                                offset: SourceOffset(
+                                    178,
+                                ),
+                                length: 5,
+                            },
+                        },
+                    },
+                ),
+                paren: Token {
+                    token: Ctrl(
+                        ")",
+                    ),
+                    span: SourceSpan {
+                        offset: SourceOffset(
+                            202,
+                        ),
+                        length: 1,
+                    },
+                },
+                args: [
+                    Call(
+                        Call {
+                            callee: Identifier(
+                                Identifier {
+                                    name: Token {
+                                        token: Identifier(
+                                            "is_zero",
+                                        ),
+                                        span: SourceSpan {
+                                            offset: SourceOffset(
+                                                184,
+                                            ),
+                                            length: 7,
+                                        },
+                                    },
+                                },
+                            ),
+                            paren: Token {
+                                token: Ctrl(
+                                    ")",
+                                ),
+                                span: SourceSpan {
+                                    offset: SourceOffset(
+                                        201,
+                                    ),
+                                    length: 1,
+                                },
+                            },
+                            args: [
+                                Identifier(
+                                    Identifier {
+                                        name: Token {
+                                            token: Identifier(
+                                                "mylist",
+                                            ),
+                                            span: SourceSpan {
+                                                offset: SourceOffset(
+                                                    192,
+                                                ),
+                                                length: 6,
+                                            },
+                                        },
+                                    },
+                                ),
+                                Literal(
+                                    Number(
+                                        1,
+                                    ),
+                                ),
+                            ],
+                        },
+                    ),
+                ],
+            },
+        ),
+    },
+)

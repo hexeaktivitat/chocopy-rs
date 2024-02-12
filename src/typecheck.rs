@@ -45,14 +45,14 @@ impl TypeChecker {
         }
     }
 
-    fn check_stmt(&mut self, stmt: &Stmt, env: Option<Vec<String>>) -> Result<Stmt, TypeError> {
-        let res = walk_stmt(&mut *self, &stmt, env)?;
+    fn check_stmt(&mut self, stmt: &mut Stmt, env: Option<Vec<String>>) -> Result<Stmt, TypeError> {
+        let res = walk_stmt(&mut *self, stmt, env)?;
 
         Ok(res)
     }
 
-    fn check_expr(&mut self, expr: &Expr, env: Option<Vec<String>>) -> Result<Expr, TypeError> {
-        let res = walk_expr(&mut *self, &expr, env)?;
+    fn check_expr(&mut self, expr: &mut Expr, env: Option<Vec<String>>) -> Result<Expr, TypeError> {
+        let res = walk_expr(&mut *self, expr, env)?;
 
         Ok(res)
     }
@@ -86,49 +86,43 @@ impl TypeChecker {
 }
 
 impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChecker {
-    fn visit_var(&mut self, x: &Var, state: Option<Vec<String>>) -> Result<Stmt, TypeError> {
-        let mut res = x.clone();
+    fn visit_var(&mut self, x: &mut Var, state: Option<Vec<String>>) -> Result<Stmt, TypeError> {
+        let checked_expr = self.check_expr(&mut x.type_id, None)?;
+        let assigned_type = self.get_expr_type(&checked_expr);
 
-        res.type_id = self.check_expr(&x.type_id, None)?;
-        let assigned_type = self.get_expr_type(&res.type_id);
-
-        let initializer = x.initializer.clone();
         let mut initializer_type = Some(Typed::Inferred(Type::None));
 
-        if let Some(init) = initializer {
-            res.initializer = Some(Box::new(self.check_expr(&init, None)?));
-            initializer_type = self.get_expr_type(&res.initializer.clone().unwrap());
+        if let Some(init) = &mut x.initializer.clone() {
+            x.initializer = Some(Box::new(self.check_expr(init, None)?));
+            initializer_type = self.get_expr_type(x.initializer.as_ref().unwrap());
         }
 
-        res.typed = assigned_type;
+        let res = x.clone();
 
         Ok(Stmt::Var(res))
     }
 
-    fn visit_func(&mut self, x: &Func, state: Option<Vec<String>>) -> Result<Stmt, TypeError> {
-        let mut res = x.clone();
-
+    fn visit_func(&mut self, x: &mut Func, state: Option<Vec<String>>) -> Result<Stmt, TypeError> {
         let mut assigned_type: Option<Typed> = None;
 
-        if let Some(id) = &x.type_id {
-            res.type_id = Some(self.check_expr(&id, None)?);
-            assigned_type = self.get_expr_type(&res.type_id.clone().unwrap());
+        if let Some(id) = &mut x.type_id {
+            x.type_id = Some(self.check_expr(id, None)?);
+            assigned_type = self.get_expr_type(&x.type_id.as_ref().unwrap());
         }
 
-        let block = self.check_stmt(&x.body, None)?;
+        let block = self.check_stmt(&mut x.body, None)?;
         let block_type = self.get_stmt_type(&block);
 
-        res.typed = assigned_type;
-
+        let res = x.clone();
         Ok(Stmt::Func(res))
     }
 
     fn visit_expression(
         &mut self,
-        x: &Expression,
+        x: &mut Expression,
         state: Option<Vec<String>>,
     ) -> Result<Stmt, TypeError> {
-        let expr_res = self.check_expr(&x.expr, None)?;
+        let expr_res = self.check_expr(&mut x.expr, None)?;
 
         let mut res = x.clone();
 
@@ -136,7 +130,11 @@ impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChec
         Ok(Stmt::Expression(res))
     }
 
-    fn visit_block(&mut self, x: &Block, state: Option<Vec<String>>) -> Result<Stmt, TypeError> {
+    fn visit_block(
+        &mut self,
+        x: &mut Block,
+        state: Option<Vec<String>>,
+    ) -> Result<Stmt, TypeError> {
         let mut res = x.clone();
 
         res.typed = Some(Typed::Assigned(Type::Empty));
@@ -144,7 +142,7 @@ impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChec
         Ok(Stmt::Block(res))
     }
 
-    fn visit_if(&mut self, x: &If, state: Option<Vec<String>>) -> Result<Stmt, TypeError> {
+    fn visit_if(&mut self, x: &mut If, state: Option<Vec<String>>) -> Result<Stmt, TypeError> {
         let mut res = x.clone();
 
         res.typed = Some(Typed::Assigned(Type::Empty));
@@ -152,7 +150,11 @@ impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChec
         Ok(Stmt::If(res))
     }
 
-    fn visit_return(&mut self, x: &Return, state: Option<Vec<String>>) -> Result<Stmt, TypeError> {
+    fn visit_return(
+        &mut self,
+        x: &mut Return,
+        state: Option<Vec<String>>,
+    ) -> Result<Stmt, TypeError> {
         let mut res = x.clone();
 
         res.typed = Some(Typed::Assigned(Type::Empty));
@@ -160,7 +162,11 @@ impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChec
         Ok(Stmt::Return(res))
     }
 
-    fn visit_print(&mut self, x: &Print, state: Option<Vec<String>>) -> Result<Stmt, TypeError> {
+    fn visit_print(
+        &mut self,
+        x: &mut Print,
+        state: Option<Vec<String>>,
+    ) -> Result<Stmt, TypeError> {
         let mut res = x.clone();
 
         res.typed = Some(Typed::Assigned(Type::Empty));
@@ -172,7 +178,7 @@ impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChec
 impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChecker {
     fn visit_literal(
         &mut self,
-        x: &Literal,
+        x: &mut Literal,
         state: Option<Vec<String>>,
     ) -> Result<Expr, TypeError> {
         let mut res = x.clone();
@@ -191,7 +197,11 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
         Ok(Expr::Literal(res, Some(Typed::Assigned(typed))))
     }
 
-    fn visit_unary(&mut self, x: &Unary, state: Option<Vec<String>>) -> Result<Expr, TypeError> {
+    fn visit_unary(
+        &mut self,
+        x: &mut Unary,
+        state: Option<Vec<String>>,
+    ) -> Result<Expr, TypeError> {
         let mut res = x.clone();
 
         res.typed = Some(Typed::Assigned(Type::Empty));
@@ -199,7 +209,11 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
         Ok(Expr::Unary(res))
     }
 
-    fn visit_binary(&mut self, x: &Binary, state: Option<Vec<String>>) -> Result<Expr, TypeError> {
+    fn visit_binary(
+        &mut self,
+        x: &mut Binary,
+        state: Option<Vec<String>>,
+    ) -> Result<Expr, TypeError> {
         let mut res = x.clone();
 
         res.typed = Some(Typed::Assigned(Type::Empty));
@@ -209,7 +223,7 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
 
     fn visit_identifier(
         &mut self,
-        x: &Identifier,
+        x: &mut Identifier,
         state: Option<Vec<String>>,
     ) -> Result<Expr, TypeError> {
         let mut res = x.clone();
@@ -221,7 +235,7 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
 
     fn visit_variable(
         &mut self,
-        x: &Variable,
+        x: &mut Variable,
         state: Option<Vec<String>>,
     ) -> Result<Expr, TypeError> {
         let mut res = x.clone();
@@ -231,7 +245,11 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
         Ok(Expr::Variable(res))
     }
 
-    fn visit_assign(&mut self, x: &Assign, state: Option<Vec<String>>) -> Result<Expr, TypeError> {
+    fn visit_assign(
+        &mut self,
+        x: &mut Assign,
+        state: Option<Vec<String>>,
+    ) -> Result<Expr, TypeError> {
         let mut res = x.clone();
 
         res.typed = Some(Typed::Assigned(Type::Empty));
@@ -241,7 +259,7 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
 
     fn visit_logical(
         &mut self,
-        x: &Logical,
+        x: &mut Logical,
         state: Option<Vec<String>>,
     ) -> Result<Expr, TypeError> {
         let mut res = x.clone();
@@ -253,7 +271,7 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
 
     fn visit_grouping(
         &mut self,
-        x: &Grouping,
+        x: &mut Grouping,
         state: Option<Vec<String>>,
     ) -> Result<Expr, TypeError> {
         let mut res = x.clone();
@@ -263,7 +281,7 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
         Ok(Expr::Grouping(res))
     }
 
-    fn visit_call(&mut self, x: &Call, state: Option<Vec<String>>) -> Result<Expr, TypeError> {
+    fn visit_call(&mut self, x: &mut Call, state: Option<Vec<String>>) -> Result<Expr, TypeError> {
         let mut res = x.clone();
 
         res.typed = Some(Typed::Assigned(Type::Empty));
@@ -271,7 +289,11 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
         Ok(Expr::Call(res))
     }
 
-    fn visit_index(&mut self, x: &Index, state: Option<Vec<String>>) -> Result<Expr, TypeError> {
+    fn visit_index(
+        &mut self,
+        x: &mut Index,
+        state: Option<Vec<String>>,
+    ) -> Result<Expr, TypeError> {
         let mut res = x.clone();
 
         res.typed = Some(Typed::Assigned(Type::Empty));

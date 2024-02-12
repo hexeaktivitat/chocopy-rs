@@ -114,19 +114,19 @@ pub struct Index {
 }
 
 pub trait ExprVisitor<T, S> {
-    fn visit_literal(&mut self, x: &Literal, state: S) -> T;
-    fn visit_unary(&mut self, x: &Unary, state: S) -> T;
-    fn visit_binary(&mut self, x: &Binary, state: S) -> T;
-    fn visit_identifier(&mut self, x: &Identifier, state: S) -> T;
-    fn visit_variable(&mut self, x: &Variable, state: S) -> T;
-    fn visit_assign(&mut self, x: &Assign, state: S) -> T;
-    fn visit_logical(&mut self, x: &Logical, state: S) -> T;
-    fn visit_grouping(&mut self, x: &Grouping, state: S) -> T;
-    fn visit_call(&mut self, x: &Call, state: S) -> T;
-    fn visit_index(&mut self, x: &Index, state: S) -> T;
+    fn visit_literal(&mut self, x: &mut Literal, state: S) -> T;
+    fn visit_unary(&mut self, x: &mut Unary, state: S) -> T;
+    fn visit_binary(&mut self, x: &mut Binary, state: S) -> T;
+    fn visit_identifier(&mut self, x: &mut Identifier, state: S) -> T;
+    fn visit_variable(&mut self, x: &mut Variable, state: S) -> T;
+    fn visit_assign(&mut self, x: &mut Assign, state: S) -> T;
+    fn visit_logical(&mut self, x: &mut Logical, state: S) -> T;
+    fn visit_grouping(&mut self, x: &mut Grouping, state: S) -> T;
+    fn visit_call(&mut self, x: &mut Call, state: S) -> T;
+    fn visit_index(&mut self, x: &mut Index, state: S) -> T;
 }
 
-pub fn walk_expr<T, S>(mut visitor: impl ExprVisitor<T, S>, x: &Expr, state: S) -> T {
+pub fn walk_expr<T, S>(mut visitor: impl ExprVisitor<T, S>, x: &mut Expr, state: S) -> T {
     match x {
         Expr::Literal(y, _) => visitor.visit_literal(y, state),
         Expr::Unary(y) => visitor.visit_unary(y, state),
@@ -206,16 +206,16 @@ pub struct Print {
 }
 
 pub trait StmtVisitor<T, S> {
-    fn visit_var(&mut self, x: &Var, state: S) -> T;
-    fn visit_func(&mut self, x: &Func, state: S) -> T;
-    fn visit_expression(&mut self, x: &Expression, state: S) -> T;
-    fn visit_block(&mut self, x: &Block, state: S) -> T;
-    fn visit_if(&mut self, x: &If, state: S) -> T;
-    fn visit_return(&mut self, x: &Return, state: S) -> T;
-    fn visit_print(&mut self, x: &Print, state: S) -> T;
+    fn visit_var(&mut self, x: &mut Var, state: S) -> T;
+    fn visit_func(&mut self, x: &mut Func, state: S) -> T;
+    fn visit_expression(&mut self, x: &mut Expression, state: S) -> T;
+    fn visit_block(&mut self, x: &mut Block, state: S) -> T;
+    fn visit_if(&mut self, x: &mut If, state: S) -> T;
+    fn visit_return(&mut self, x: &mut Return, state: S) -> T;
+    fn visit_print(&mut self, x: &mut Print, state: S) -> T;
 }
 
-pub fn walk_stmt<T, S>(mut visitor: impl StmtVisitor<T, S>, x: &Stmt, state: S) -> T {
+pub fn walk_stmt<T, S>(mut visitor: impl StmtVisitor<T, S>, x: &mut Stmt, state: S) -> T {
     match x {
         Stmt::Var(y) => visitor.visit_var(y, state),
         Stmt::Func(y) => visitor.visit_func(y, state),
