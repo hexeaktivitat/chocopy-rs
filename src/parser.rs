@@ -178,10 +178,7 @@ impl Parser {
             type_id,
             parameters: params,
             param_types,
-            body: match body {
-                Stmt::Block(Block { scope, typed: None }) => scope,
-                _ => unreachable!("somehow this was reached"),
-            },
+            body: Box::new(body),
             typed: None,
         }))
     }
@@ -207,7 +204,7 @@ impl Parser {
             }),
         }?;
 
-        let mut initializer = Expr::Literal(Literal::None);
+        let mut initializer = Expr::Literal(Literal::None, None);
         if self.matches(&[TT::Operator(Op::Equals)]) {
             initializer = self.expression()?;
         }
@@ -575,12 +572,12 @@ impl Parser {
                             }
                         }
                     } else {
-                        vexpr.push(Expr::Literal(Literal::Empty));
+                        vexpr.push(Expr::Literal(Literal::Empty, None));
                     }
 
                     self.consume(&TT::Ctrl("]".into()), "expected ']' after '[")?;
 
-                    Ok(Expr::Literal(Literal::List(vexpr)))
+                    Ok(Expr::Literal(Literal::List(vexpr), None))
                 } else {
                     Err(ParseError::UnexpectedToken {
                         help: "tried to match '(' or '[' and failed".into(),
@@ -590,18 +587,18 @@ impl Parser {
             }
             // TT::Operator(_) => todo!(),
             TT::Value(v) => Ok(match v {
-                TLiteral::Num(n) => Expr::Literal(Literal::Number(n)),
-                TLiteral::Str(s) => Expr::Literal(Literal::String(s)),
+                TLiteral::Num(n) => Expr::Literal(Literal::Number(n), None),
+                TLiteral::Str(s) => Expr::Literal(Literal::String(s), None),
                 TLiteral::Boolean(b) => {
                     if b {
-                        Expr::Literal(Literal::True)
+                        Expr::Literal(Literal::True, None)
                     } else {
-                        Expr::Literal(Literal::False)
+                        Expr::Literal(Literal::False, None)
                     }
                 }
                 // TLiteral::List(l) => todo!(),
-                TLiteral::None => Expr::Literal(Literal::None),
-                TLiteral::Empty => Expr::Literal(Literal::Empty),
+                TLiteral::None => Expr::Literal(Literal::None, None),
+                TLiteral::Empty => Expr::Literal(Literal::Empty, None),
             }),
             // TT::Indent => todo!(),
             // TT::Dedent => todo!(),

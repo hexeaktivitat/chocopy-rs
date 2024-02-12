@@ -26,7 +26,7 @@ pub enum Type {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
-    Literal(Literal),
+    Literal(Literal, Option<Typed>),
     Unary(Unary),
     Binary(Binary),
     Identifier(Identifier),
@@ -128,7 +128,7 @@ pub trait ExprVisitor<T, S> {
 
 pub fn walk_expr<T, S>(mut visitor: impl ExprVisitor<T, S>, x: &Expr, state: S) -> T {
     match x {
-        Expr::Literal(y) => visitor.visit_literal(y, state),
+        Expr::Literal(y, _) => visitor.visit_literal(y, state),
         Expr::Unary(y) => visitor.visit_unary(y, state),
         Expr::Binary(y) => visitor.visit_binary(y, state),
         Expr::Identifier(y) => visitor.visit_identifier(y, state),
@@ -166,7 +166,7 @@ pub struct Func {
     pub type_id: Option<Expr>,
     pub parameters: Vec<Token>,
     pub param_types: Vec<Token>,
-    pub body: Vec<Stmt>,
+    pub body: Box<Stmt>,
     pub typed: Option<Typed>,
 }
 
@@ -230,14 +230,14 @@ pub fn walk_stmt<T, S>(mut visitor: impl StmtVisitor<T, S>, x: &Stmt, state: S) 
 impl std::fmt::Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Expr::Literal(Literal::Number(n)) => n.fmt(f),
-            Expr::Literal(Literal::String(s)) => s.fmt(f),
-            Expr::Literal(Literal::False) => false.fmt(f),
-            Expr::Literal(Literal::None) => f.write_str("None"),
-            Expr::Literal(Literal::Empty) => f.write_str("Empty"),
-            Expr::Literal(Literal::Eol) => f.write_str("End of line"),
-            Expr::Literal(Literal::True) => true.fmt(f),
-            Expr::Literal(Literal::List(l)) => f.write_fmt(format_args!("{:?}", l)),
+            Expr::Literal(Literal::Number(n), _) => n.fmt(f),
+            Expr::Literal(Literal::String(s), _) => s.fmt(f),
+            Expr::Literal(Literal::False, _) => false.fmt(f),
+            Expr::Literal(Literal::None, _) => f.write_str("None"),
+            Expr::Literal(Literal::Empty, _) => f.write_str("Empty"),
+            Expr::Literal(Literal::Eol, _) => f.write_str("End of line"),
+            Expr::Literal(Literal::True, _) => true.fmt(f),
+            Expr::Literal(Literal::List(l), _) => f.write_fmt(format_args!("{:?}", l)),
             Expr::Logical(l) => f.write_fmt(format_args!("{} {} {}", l.left, l.operator, l.right)),
             Expr::Variable(v) => v.name.fmt(f),
             Expr::Assign(a) => f.write_fmt(format_args!("{} = {}", a.name, a.value)),

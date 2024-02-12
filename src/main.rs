@@ -6,6 +6,7 @@ use thiserror::Error;
 
 use lexer::{LexError, Lexer};
 use parser::{ParseError, Parser};
+use typecheck::{TypeChecker, TypeError};
 
 mod lexer;
 mod parser;
@@ -31,6 +32,16 @@ pub struct ParseErrors {
     source_code: String,
     #[related]
     related: Vec<ParseError>,
+}
+
+#[derive(Error, Debug, Diagnostic)]
+#[error("Type errors")]
+#[diagnostic()]
+pub struct TypeErrors {
+    #[source_code]
+    source_code: String,
+    #[related]
+    related: Vec<TypeError>,
 }
 
 fn main() -> Result<()> {
@@ -59,8 +70,21 @@ fn main() -> Result<()> {
 
     println!("\nPARSE\n=====");
 
-    for r in result {
+    for r in result.clone() {
         println!("{:#?}", r);
+    }
+
+    let mut type_checker = TypeChecker::new(&result);
+
+    let typed_ast = type_checker.verify().map_err(|err_list| TypeErrors {
+        source_code: String::from_utf8(code.to_owned()).unwrap(),
+        related: err_list,
+    })?;
+
+    println!("\nTYPECHECK\n=========");
+
+    for ta in typed_ast.clone() {
+        println!("{:#?}", ta);
     }
 
     Ok(())
