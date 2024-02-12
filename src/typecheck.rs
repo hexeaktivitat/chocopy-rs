@@ -102,17 +102,11 @@ impl TypeChecker {
 
 impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChecker {
     fn visit_var(&mut self, x: &mut Var, state: Option<Vec<String>>) -> Result<Stmt, TypeError> {
-        println!("visit var {:?}", x.type_id);
         x.type_id = self.check_expr(&mut x.type_id, None)?;
-        println!("visit var {:?}", x.name);
 
-        println!("visit var calc type {:?}", x.type_id);
         let assigned_type = self.get_expr_type(&x.type_id);
-        println!("visit var assn type {:?}", assigned_type);
 
         let mut initializer_type = Some(Typed::Inferred(Type::None));
-
-        println!("initializer {:?}", x.initializer);
 
         if let Some(init) = &mut x.initializer {
             x.initializer = Some(Box::new(self.check_expr(init, None)?));
@@ -257,12 +251,11 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
             Literal::Number(_) => Type::Num,
             Literal::String(_) => Type::Str,
             Literal::List(l) => {
-                println!("{:?}", x);
                 if l.is_empty() {
                     Type::List(Box::new(Type::Empty))
                 } else {
                     let mut ret_types = vec![];
-                    for i in 0..l.len() - 1 {
+                    for i in 0..l.len() {
                         l[i] = self.check_expr(&mut l[i], None)?;
                         ret_types.push(self.get_expr_type(&l[i]));
                     }
@@ -347,7 +340,6 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
         x: &mut Identifier,
         state: Option<Vec<String>>,
     ) -> Result<Expr, TypeError> {
-        println!("visit_ident {:?}", x);
         let ty = x.name.token.to_string();
 
         if ty == "int" {
