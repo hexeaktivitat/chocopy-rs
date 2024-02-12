@@ -15,6 +15,14 @@ pub enum TypeError {
         #[label]
         span: SourceSpan,
     },
+
+    #[error("type declaration and derived type do not match")]
+    DeclMismatch {
+        #[help]
+        help: String,
+        #[label]
+        span: SourceSpan,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -34,7 +42,7 @@ impl TypeChecker {
         for stmt in self.ast.clone().iter_mut() {
             match self.check_stmt(stmt, None) {
                 Ok(s) => result.push(s),
-                Err(_) => todo!(),
+                Err(e) => errors.push(e),
             }
         }
 
@@ -62,7 +70,7 @@ impl TypeChecker {
             Expr::Literal(_, t) => t.clone(),
             Expr::Unary(u) => u.typed.clone(),
             Expr::Binary(b) => b.typed.clone(),
-            Expr::Identifier(i) => Some(Typed::Inferred(Type::None)),
+            Expr::Identifier(i) => Some(Typed::Inferred(Type::Id(i.name.to_string()))),
             Expr::Assign(a) => a.typed.clone(),
             Expr::Logical(l) => l.typed.clone(),
             Expr::Grouping(g) => g.typed.clone(),
@@ -97,9 +105,18 @@ impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChec
             initializer_type = self.get_expr_type(x.initializer.as_ref().unwrap());
         }
 
-        let res = x.clone();
-
-        Ok(Stmt::Var(res))
+        if !(assigned_type == initializer_type) {
+            Err(TypeError::DeclMismatch {
+                help: format!(
+                    "assigned type was {:#?} while initialized type was {:#?}",
+                    assigned_type, initializer_type
+                ),
+                span: x.name.span,
+            })
+        } else {
+            let res = x.clone();
+            Ok(Stmt::Var(res))
+        }
     }
 
     fn visit_func(&mut self, x: &mut Func, state: Option<Vec<String>>) -> Result<Stmt, TypeError> {
@@ -113,8 +130,18 @@ impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChec
         let block = self.check_stmt(&mut x.body, None)?;
         let block_type = self.get_stmt_type(&block);
 
-        let res = x.clone();
-        Ok(Stmt::Func(res))
+        if !(assigned_type == block_type) {
+            Err(TypeError::DeclMismatch {
+                help: format!(
+                    "assigned type was {:#?} while initialized type was {:#?}",
+                    assigned_type, block_type
+                ),
+                span: x.name.span,
+            })
+        } else {
+            let res = x.clone();
+            Ok(Stmt::Func(res))
+        }
     }
 
     fn visit_expression(
