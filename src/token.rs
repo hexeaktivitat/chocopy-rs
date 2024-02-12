@@ -83,7 +83,7 @@ impl std::fmt::Display for TokenType {
             TokenType::Keyword(k) => f.write_fmt(format_args!("KEYWORD {}", k)),
             TokenType::Indent => f.write_str("INDENT"),
             TokenType::Dedent => f.write_str("DEDENT"),
-            TokenType::Identifier(i) => f.write_fmt(format_args!("IDENTIFIER {}", i)),
+            TokenType::Identifier(i) => f.write_fmt(format_args!("{}", i)),
             // TokenType::Type(t) => f.write_fmt(format_args!("TYPE {}", t)),
             TokenType::Eof => f.write_str("END OF FILE"),
             TokenType::Newline => f.write_str("NEWLINE"),

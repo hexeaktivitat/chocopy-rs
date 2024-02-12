@@ -70,7 +70,7 @@ impl TypeChecker {
             Expr::Literal(_, t) => t.clone(),
             Expr::Unary(u) => u.typed.clone(),
             Expr::Binary(b) => b.typed.clone(),
-            Expr::Identifier(i) => Some(Typed::Inferred(Type::Id(i.name.to_string()))),
+            Expr::Identifier(i) => Some(Typed::Inferred(Type::Id(i.name.token.to_string()))),
             Expr::Assign(a) => a.typed.clone(),
             Expr::Logical(l) => l.typed.clone(),
             Expr::Grouping(g) => g.typed.clone(),
