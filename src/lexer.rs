@@ -126,12 +126,12 @@ impl<'a> Lexer<'a> {
             b',' => Ok(Some(TokenType::Ctrl(",".into()))),
             b'.' => Ok(Some(TokenType::Ctrl(".".into()))),
             b'#' => {
-                while !self.match_next(b'\n') && !self.end_of_code() {
+                while self.peek() != b'\n' && !self.end_of_code() {
                     self.advance();
                 }
-                self.line += 1;
-                self.indent_flag = true;
-                Ok(Some(TokenType::Newline))
+                // self.line += 1;
+                // self.indent_flag = true;
+                Ok(None)
             }
 
             // significant whitespace

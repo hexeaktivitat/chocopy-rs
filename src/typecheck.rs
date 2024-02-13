@@ -1,5 +1,3 @@
-use std::arch::x86_64::_mm256_permute2f128_ps;
-
 use miette::{Diagnostic, Result, SourceSpan};
 use thiserror::Error;
 
@@ -35,11 +33,15 @@ pub enum TypeError {
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeChecker {
     pub ast: Vec<Stmt>,
+    pub symbols: Vec<(String, Typed)>,
 }
 
 impl TypeChecker {
     pub fn new(ast: &Vec<Stmt>) -> Self {
-        Self { ast: ast.clone() }
+        Self {
+            ast: ast.clone(),
+            symbols: vec![],
+        }
     }
 
     pub fn verify(&mut self) -> Result<Vec<Stmt>, Vec<TypeError>> {
@@ -98,31 +100,68 @@ impl TypeChecker {
             Stmt::Print(p) => p.typed.clone(),
         }
     }
+
+    fn get_identifier_type(&self, id: &Token) -> Result<Option<Typed>, TypeError> {
+        match &id.token {
+            TT::Identifier(i) => {
+                if i == "int" {
+                    Ok(Some(Typed::Assigned(Type::Num)))
+                } else if i == "str" {
+                    Ok(Some(Typed::Assigned(Type::Str)))
+                } else if i == "bool" {
+                    Ok(Some(Typed::Assigned(Type::Bool)))
+                } else if i == "None" {
+                    Ok(Some(Typed::Assigned(Type::None)))
+                } else {
+                    Ok(Some(Typed::Assigned(Type::Id(i.clone()))))
+                }
+            }
+            _ => unreachable!(),
+        }
+    }
 }
 
 impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChecker {
     fn visit_var(&mut self, x: &mut Var, state: Option<Vec<String>>) -> Result<Stmt, TypeError> {
-        x.type_id = self.check_expr(&mut x.type_id, None)?;
+        let assigned_type = self.get_identifier_type(&x.type_id)?;
+        let var_name = match &x.name.token {
+            TT::Identifier(i) => i.clone(),
+            _ => unreachable!(),
+        };
 
-        let assigned_type = self.get_expr_type(&x.type_id);
+        if x.initializer.is_some() {
+            let mut initializer_type = Some(Typed::Inferred(Type::None));
 
-        let mut initializer_type = Some(Typed::Inferred(Type::None));
+            if let Some(init) = &mut x.initializer {
+                x.initializer = Some(Box::new(self.check_expr(init, None)?));
+                initializer_type = self.get_expr_type(x.initializer.as_ref().unwrap());
+            }
 
-        if let Some(init) = &mut x.initializer {
-            x.initializer = Some(Box::new(self.check_expr(init, None)?));
-            initializer_type = self.get_expr_type(x.initializer.as_ref().unwrap());
-        }
-
-        if !(assigned_type == initializer_type) {
-            Err(TypeError::DeclMismatch {
-                help: format!(
-                    "assigned type was {:#?} while initialized type was {:#?}",
-                    assigned_type, initializer_type
-                ),
-                span: x.name.span,
-            })
+            if !(assigned_type == initializer_type)
+                && (initializer_type != Some(Typed::Assigned(Type::None)))
+                && (initializer_type != Some(Typed::Assigned(Type::Empty)))
+            {
+                Err(TypeError::DeclMismatch {
+                    help: format!(
+                        "assigned type was {:#?} while initialized type was {:#?}",
+                        assigned_type, initializer_type
+                    ),
+                    span: x.name.span,
+                })
+            } else {
+                x.typed = assigned_type;
+                if !self
+                    .symbols
+                    .contains(&(var_name.clone(), x.typed.clone().unwrap()))
+                {
+                    self.symbols.push((var_name, x.typed.clone().unwrap()));
+                }
+                let res = x.clone();
+                Ok(Stmt::Var(res))
+            }
         } else {
-            x.typed = self.get_expr_type(&x.type_id);
+            x.typed = assigned_type;
+            self.symbols.push((var_name, x.typed.clone().unwrap()));
             let res = x.clone();
             Ok(Stmt::Var(res))
         }
@@ -131,9 +170,32 @@ impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChec
     fn visit_func(&mut self, x: &mut Func, state: Option<Vec<String>>) -> Result<Stmt, TypeError> {
         let mut assigned_type: Option<Typed> = None;
 
-        if let Some(id) = &mut x.type_id {
-            x.type_id = Some(self.check_expr(id, None)?);
-            assigned_type = self.get_expr_type(&x.type_id.as_ref().unwrap());
+        let func_name = match &x.name.token {
+            TT::Identifier(i) => i.clone(),
+            _ => unreachable!(),
+        };
+
+        if let Some(id) = &mut x.type_id.clone() {
+            assigned_type = self.get_identifier_type(&id)?;
+        }
+
+        let mut param_types = vec![];
+        let mut params = vec![];
+
+        for p in x.parameters.iter_mut() {
+            params.push(self.check_stmt(p, None)?);
+            let ptype = self.get_stmt_type(p);
+            match p {
+                Stmt::Var(v) => {
+                    let p_name = match &v.name.token {
+                        TT::Identifier(i) => i.clone(),
+                        _ => unreachable!(),
+                    };
+                    self.symbols.push((p_name, ptype.clone().unwrap()))
+                }
+                _ => unreachable!(),
+            }
+            param_types.push(ptype);
         }
 
         let block = self.check_stmt(&mut x.body, None)?;
@@ -148,6 +210,8 @@ impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChec
                 span: x.name.span,
             })
         } else {
+            x.typed = assigned_type;
+            self.symbols.push((func_name, x.typed.clone().unwrap()));
             let res = x.clone();
             Ok(Stmt::Func(res))
         }
@@ -172,7 +236,7 @@ impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChec
         state: Option<Vec<String>>,
     ) -> Result<Stmt, TypeError> {
         let mut ret_types = vec![];
-        for i in 0..x.scope.len() - 1 {
+        for i in 0..x.scope.len() {
             x.scope[i] = self.check_stmt(&mut x.scope[i], None)?;
             if matches!(x.scope[i], Stmt::Return(_)) {
                 ret_types.push(self.get_stmt_type(&x.scope[i]));
@@ -245,8 +309,6 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
         x: &mut Literal,
         state: Option<Vec<String>>,
     ) -> Result<Expr, TypeError> {
-        let mut res = x.clone();
-
         let typed = match x {
             Literal::Number(_) => Type::Num,
             Literal::String(_) => Type::Str,
@@ -269,8 +331,8 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
                     }
                     let ret = if let Some(t) = prev {
                         match t {
-                            Typed::Assigned(ty) => ty,
-                            Typed::Inferred(ty) => ty,
+                            Typed::Assigned(ty) => Type::List(Box::new(ty)),
+                            Typed::Inferred(ty) => Type::List(Box::new(ty)),
                         }
                     } else {
                         return Err(TypeError::InvalidType {
@@ -288,6 +350,7 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
             Literal::Eol => Type::None,
         };
 
+        let res = x.clone();
         Ok(Expr::Literal(res, Some(Typed::Assigned(typed))))
     }
 
@@ -346,6 +409,10 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
             x.typed = Some(Typed::Assigned(Type::Num));
         } else if ty == "str" {
             x.typed = Some(Typed::Assigned(Type::Str));
+        } else if ty == "bool" {
+            x.typed = Some(Typed::Assigned(Type::Bool));
+        } else if ty == "None" {
+            x.typed = Some(Typed::Assigned(Type::None));
         } else {
             x.typed = Some(Typed::Inferred(Type::Id(x.name.token.to_string())));
         }
@@ -359,10 +426,20 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
         x: &mut Variable,
         state: Option<Vec<String>>,
     ) -> Result<Expr, TypeError> {
-        let mut res = x.clone();
-
-        res.typed = Some(Typed::Assigned(Type::Empty));
-
+        let var_name = match &x.name.token {
+            TT::Identifier(i) => i,
+            _ => unreachable!(),
+        };
+        for (sym, ty) in self.symbols.clone().iter() {
+            if sym == var_name {
+                x.typed = Some(ty.clone());
+                break;
+            }
+        }
+        if x.typed == None {
+            x.typed = Some(Typed::Inferred(Type::None));
+        }
+        let res = x.clone();
         Ok(Expr::Variable(res))
     }
 
@@ -391,9 +468,12 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
         let right = self.check_expr(&mut x.right, None)?;
         let right_type = self.get_expr_type(&right);
 
-        if !(left_type == right_type) || !(x.typed == left_type) || !(x.typed == right_type) {
+        if !(left_type == right_type) {
             Err(TypeError::TypeMismatch {
-                help: "types dont match".into(),
+                help: format!(
+                    "left type {:?} and right type {:?} do not match",
+                    left_type, right_type
+                ),
                 span: x.operator.span,
             })
         } else {
@@ -415,10 +495,7 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
     }
 
     fn visit_call(&mut self, x: &mut Call, state: Option<Vec<String>>) -> Result<Expr, TypeError> {
-        let mut res = x.clone();
-
-        res.typed = Some(Typed::Assigned(Type::Empty));
-
+        let res = x.clone();
         Ok(Expr::Call(res))
     }
 

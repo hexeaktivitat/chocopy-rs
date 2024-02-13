@@ -28,6 +28,7 @@ pub struct Parser {
     pub tokens: Vec<Token>,
     pub current: usize,
     pub indentation: Vec<usize>,
+    pub type_search: bool,
 }
 
 trait MatchToken {
@@ -55,6 +56,7 @@ impl Parser {
             tokens,
             current: 0,
             indentation: vec![0],
+            type_search: false,
         }
     }
 
@@ -104,7 +106,6 @@ impl Parser {
         self.consume(&TT::Ctrl("(".into()), "expected '(' after function name ")?;
 
         let mut params = vec![];
-        let mut param_types = vec![];
 
         if !self.check(&TT::Ctrl(")".into())) {
             loop {
@@ -112,35 +113,40 @@ impl Parser {
                     panic!("why");
                 }
 
-                params.push(
-                    self.consume(
-                        &|t: &Token| matches!(t.token, TT::Identifier(_)),
-                        "expected parameter value",
-                    )?
-                    .clone(),
-                );
+                let param_var = self.consume(
+                    &|t: &Token| matches!(t.token, TT::Identifier(_)),
+                    "expected variable name",
+                )?;
 
                 self.consume(&TT::Ctrl(":".into()), "expected type for param")?;
 
+                self.type_search = true;
+
+                let mut param_type = Token::new(TT::Identifier("".into()), name.span);
                 if self.peek().token == TT::Ctrl("[".into()) {
                     self.consume(&TT::Ctrl("[".into()), "expected '[' for list type")?;
-                    param_types.push(self.consume(
+                    param_type = self.consume(
                         &|t: &Token| matches!(t.token, TT::Identifier(_)),
-                        "expected list type",
-                    )?);
-                    self.consume(
-                        &TT::Ctrl("]".into()),
-                        "expected ']' after '[' for list type",
+                        "expected type declaration",
                     )?;
+                    self.consume(&TT::Ctrl("]".into()), "expected ']' after '['")?;
                 } else {
-                    param_types.push(
-                        self.consume(
-                            &|t: &Token| matches!(t.token, TT::Identifier(_)),
-                            "expected parameter type",
-                        )?
-                        .clone(),
-                    );
-                }
+                    param_type = self.consume(
+                        &|t: &Token| matches!(t.token, TT::Identifier(_)),
+                        "expected type declaration",
+                    )?;
+                };
+
+                self.type_search = false;
+
+                let param = Stmt::Var(Var {
+                    name: param_var,
+                    type_id: param_type,
+                    initializer: None,
+                    typed: None,
+                });
+
+                params.push(param);
 
                 if !self.matches(&[TT::Ctrl(",".into())]) {
                     break;
@@ -154,13 +160,27 @@ impl Parser {
         )?;
 
         // need to revisit logic here
+        self.type_search = true;
+        let mut type_id = None;
 
-        let type_id = if self.peek().token == TT::Ctrl("->".into()) {
+        if self.peek().token == TT::Ctrl("->".into()) {
             self.consume(&TT::Ctrl("->".into()), "this shouldn't fail")?;
-            Some(self.expression()?)
-        } else {
-            None
-        };
+            if self.peek().token == TT::Ctrl("[".into()) {
+                self.consume(&TT::Ctrl("[".into()), "expected '[' for list")?;
+                type_id = Some(self.consume(
+                    &|t: &Token| matches!(t.token, TT::Identifier(_)),
+                    "expected type declaration",
+                )?);
+                self.consume(&TT::Ctrl("]".into()), "expected ']' after '['")?;
+            } else {
+                type_id = Some(self.consume(
+                    &|t: &Token| matches!(t.token, TT::Identifier(_)),
+                    "expected type declaration",
+                )?);
+            }
+        }
+
+        self.type_search = false;
 
         self.consume(
             &TT::Ctrl(":".into()),
@@ -177,7 +197,6 @@ impl Parser {
             name,
             type_id,
             parameters: params,
-            param_types,
             body: Box::new(body),
             typed: None,
         }))
@@ -195,22 +214,24 @@ impl Parser {
         )?;
 
         // need to revisit logic here
-
-        let type_id = match self.expression() {
-            Ok(expr) => Ok(expr),
-            Err(_) => Err(ParseError::UnexpectedToken {
-                help: "expected type declaration after variable declaration".into(),
-                span: self.tokens[self.current].span,
-            }),
-        }?;
-
-        let mut initializer = Expr::Literal(Literal::None, None);
-        if self.matches(&[TT::Operator(Op::Equals)]) {
-            self.consume(
-                &TT::Operator(Op::Equals),
-                "expected '=' during variable decl",
+        let mut type_id = Token::new(TT::Value(TLiteral::None), name.span);
+        if self.peek().token == TT::Ctrl("[".into()) {
+            self.consume(&TT::Ctrl("[".into()), "expected '[' after list decl")?;
+            type_id = self.consume(
+                &|t: &Token| matches!(t.token, TT::Identifier(_)),
+                "expected list identifier",
             )?;
-            initializer = self.expression()?;
+            self.consume(&TT::Ctrl("]".into()), "expected ']' after list")?;
+        } else {
+            type_id = self.consume(
+                &|t: &Token| matches!(t.token, TT::Identifier(_)),
+                "expected type after declaration",
+            )?;
+        };
+
+        let mut initializer = None;
+        if self.matches(&[TT::Operator(Op::Equals)]) {
+            initializer = Some(Box::new(self.expression()?));
         }
 
         self.consume(&TT::Newline, "expected newline after variable decl")?;
@@ -218,7 +239,7 @@ impl Parser {
         Ok(Stmt::Var(Var {
             name,
             type_id,
-            initializer: Some(Box::new(initializer)),
+            initializer,
             typed: None,
         }))
     }
@@ -336,9 +357,11 @@ impl Parser {
         let expr = self.cexpr()?;
 
         if self.matches(&[TT::Operator(Op::Equals)]) {
+            println!("prev: {:?}", self.previous());
             let _equals = self.previous();
             let value = self.assignment()?;
-            if let Expr::Identifier(v) = expr {
+            println!("value: {:?}", value);
+            if let Expr::Variable(v) = expr {
                 let name = v.name;
                 Ok(Expr::Assign(Assign {
                     name,
@@ -365,7 +388,7 @@ impl Parser {
     /// cexpr operator cexpr
     /// - cexpri
     fn cexpr(&mut self) -> Result<Expr, ParseError> {
-        let mut expr = self.or()?;
+        let expr = self.or()?;
 
         Ok(expr)
     }
@@ -567,21 +590,7 @@ impl Parser {
                         typed: None,
                     }))
                 } else if c == "[" {
-                    let mut vexpr = vec![];
-                    if !self.check(&TT::Ctrl("]".into())) {
-                        loop {
-                            vexpr.push(self.expression()?);
-                            if !self.matches(&[TT::Ctrl(",".into())]) {
-                                break;
-                            }
-                        }
-                    } else {
-                        vexpr.push(Expr::Literal(Literal::Empty, None));
-                    }
-
-                    self.consume(&TT::Ctrl("]".into()), "expected ']' after '[")?;
-
-                    Ok(Expr::Literal(Literal::List(vexpr), None))
+                    self.make_list()
                 } else {
                     Err(ParseError::UnexpectedToken {
                         help: "tried to match '(' or '[' and failed".into(),
@@ -600,19 +609,32 @@ impl Parser {
                         Expr::Literal(Literal::False, None)
                     }
                 }
-                // TLiteral::List(l) => todo!(),
                 TLiteral::None => Expr::Literal(Literal::None, None),
                 TLiteral::Empty => Expr::Literal(Literal::Empty, None),
             }),
             // TT::Indent => todo!(),
             // TT::Dedent => todo!(),
-            TT::Identifier(_) => Ok(Expr::Identifier(Identifier {
-                name: self.previous(),
-                typed: None,
-            })),
+            TT::Identifier(_) => {
+                if self.type_search {
+                    Ok(Expr::Identifier(Identifier {
+                        name: self.previous(),
+                        typed: None,
+                    }))
+                } else {
+                    Ok(Expr::Variable(Variable {
+                        name: self.previous(),
+                        typed: None,
+                    }))
+                }
+            }
             // TT::Eof => todo!(),
             _ => Err(ParseError::UnexpectedToken {
-                help: "terminal parse resulted in null token".into(),
+                help: format!(
+                    "terminal parse resulted in null token. \nprev: {:?}\ncur: {:?}\nnext: {:?}",
+                    self.previous(),
+                    self.peek(),
+                    self.tokens[self.current + 1]
+                ),
                 span: self.tokens[self.current].span,
             }),
         }
@@ -688,6 +710,25 @@ impl Parser {
         }
         false
     }
+
+    fn make_list(&mut self) -> Result<Expr, ParseError> {
+        let mut vexpr = vec![];
+        if !self.check(&TT::Ctrl("]".into())) {
+            loop {
+                vexpr.push(self.expression()?);
+                if !self.matches(&[TT::Ctrl(",".into())]) {
+                    break;
+                }
+            }
+        } else {
+            vexpr.push(Expr::Literal(Literal::Empty, None));
+        }
+
+        self.consume(&TT::Ctrl("]".into()), "expected ']' after '[")?;
+
+        Ok(Expr::Literal(Literal::List(vexpr), None))
+    }
+
     /*
         fn indent(&mut self) -> Result<usize, ParseError> {
             let token = self.peek();

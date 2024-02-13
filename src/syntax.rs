@@ -103,7 +103,6 @@ pub struct Call {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Variable {
     pub name: Token,
-    pub type_id: Box<Expr>,
     pub typed: Option<Typed>,
 }
 
@@ -155,7 +154,7 @@ pub enum Stmt {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Var {
     pub name: Token,
-    pub type_id: Expr,
+    pub type_id: Token,
     pub initializer: Option<Box<Expr>>,
     pub typed: Option<Typed>,
 }
@@ -163,9 +162,8 @@ pub struct Var {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Func {
     pub name: Token,
-    pub type_id: Option<Expr>,
-    pub parameters: Vec<Token>,
-    pub param_types: Vec<Token>,
+    pub type_id: Option<Token>,
+    pub parameters: Vec<Stmt>,
     pub body: Box<Stmt>,
     pub typed: Option<Typed>,
 }

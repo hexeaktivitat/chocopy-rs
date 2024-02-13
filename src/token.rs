@@ -5,7 +5,7 @@ pub enum Literal {
     Num(i32),
     Str(String),
     Boolean(bool),
-    // List(Vec<Literal>),
+    // List(Vec<Token>),
     None,
     Empty,
 }
