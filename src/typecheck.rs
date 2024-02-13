@@ -504,10 +504,9 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
         x: &mut Index,
         state: Option<Vec<String>>,
     ) -> Result<Expr, TypeError> {
-        let mut res = x.clone();
+        x.typed = Some(Typed::Inferred(Type::Num));
 
-        res.typed = Some(Typed::Assigned(Type::Empty));
-
+        let res = x.clone();
         Ok(Expr::Index(res))
     }
 }
