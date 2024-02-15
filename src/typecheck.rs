@@ -269,7 +269,7 @@ impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChec
             for t in ret_types {
                 if prev == None {
                     prev = t;
-                } else if prev == t {
+                } else if self.match_type(&prev.clone().unwrap(), &t.clone().unwrap()) {
                     prev = t;
                 }
             }

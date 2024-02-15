@@ -143,7 +143,6 @@ impl<'a> Lexer<'a> {
                 self.indent_flag = true;
                 Ok(Some(TokenType::Newline))
             }
-            // b'\t' => Ok(Some(TokenType::Ctrl('\t'))),
 
             // operators
             b'+' => Ok(Some(TokenType::Operator(Op::Add))),
@@ -223,33 +222,35 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// creates the token and associates it with a span of the source code
     fn make_token(&self, token_type: TokenType) -> Result<Token, LexError> {
         let lexeme = (self.start, self.current - self.start).into();
         Ok(Token::new(token_type, lexeme))
     }
 
-    // returns the next byte of source code and advances the internal counter
+    /// returns the next byte of source code and advances the internal counter
     fn advance(&mut self) -> u8 {
         let c = self.source[self.current];
         self.current += 1;
         c
     }
 
-    // EOF test
+    /// EOF test
     fn end_of_code(&self) -> bool {
         self.current >= self.source.len()
     }
 
-    // lookahead(1)
+    /// lookahead(1)
     fn peek(&self) -> u8 {
         *self.source.get(self.current).unwrap_or(&b'\0')
     }
 
-    // lookahead(2)
+    /// lookahead(2)
     fn peek_next(&self) -> u8 {
         *self.source.get(self.current + 1).unwrap_or(&b'\0')
     }
 
+    /// ignores matching expected values
     fn match_next(&mut self, expected: u8) -> bool {
         if self.end_of_code() || self.source[self.current] != expected {
             false
@@ -259,6 +260,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// creates a string value from the bytestream
     fn string(&mut self) -> Result<TokenType, LexError> {
         while self.peek() != b'"' && !self.end_of_code() {
             if self.peek() == b'\n' {
@@ -280,6 +282,8 @@ impl<'a> Lexer<'a> {
         )))
     }
 
+    /// given a start and ending position, parses a given slice of the bytestream
+    /// into a string literal
     fn substring(&self, start: usize, end: usize) -> Result<String, LexError> {
         String::from_utf8(self.source[start..end].to_vec()).map_err(|_source| {
             LexError::InvalidCharacter {
@@ -289,6 +293,7 @@ impl<'a> Lexer<'a> {
         })
     }
 
+    /// parses numerical values from the bytestream
     fn number(&mut self) -> Result<TokenType, LexError> {
         while self.peek().is_ascii_digit() && !self.end_of_code() && self.peek() != b'.' {
             self.advance();
@@ -318,6 +323,8 @@ impl<'a> Lexer<'a> {
         )))
     }
 
+    /// used specifically for valid code terms rather than string literals
+    /// variable names, function name, class names, etc.
     fn identifier(&mut self) -> Result<String, LexError> {
         while self.peek().is_ascii_alphabetic() || self.peek() == b'_' {
             self.advance();

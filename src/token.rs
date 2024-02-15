@@ -60,6 +60,7 @@ impl std::fmt::Display for Op {
     }
 }
 
+// consider Ctrl as enum for refactor / reuse next time
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
     Keyword(String),

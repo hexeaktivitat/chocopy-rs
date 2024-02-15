@@ -60,6 +60,8 @@ impl Parser {
         }
     }
 
+    /// given an array of tokens, processes the token stream into an abstract syntax tree
+    /// recursive descent w/o Pratt parsing
     pub fn parse(&mut self) -> Result<Vec<Stmt>, Vec<ParseError>> {
         let mut statements = vec![];
         let mut errors = vec![];
@@ -97,6 +99,8 @@ impl Parser {
         res
     }
 
+    /// turns 'def' stmts into functions following grammar rules
+    /// def ID ( [typed_var [typed_var]* ]? ) [ -> type ]? : NEWLINE INDENT func_body DEDENT
     fn declare_func(&mut self) -> Result<Stmt, ParseError> {
         let name = self.consume(
             &|t: &Token| matches!(t.token, TT::Identifier(_)),
@@ -202,6 +206,8 @@ impl Parser {
         }))
     }
 
+    /// generates a variable stmt from the grammar
+    /// ID : type = literal NEWLINE
     fn declare_variable(&mut self) -> Result<Stmt, ParseError> {
         let name = self.consume(
             &|t: &Token| matches!(t.token, TT::Identifier(_)),
@@ -259,6 +265,9 @@ impl Parser {
         res
     }
 
+    /// processes an indented block of stmts
+    /// NEWLINE INDENT stmt+ DEDENT
+    /// assumes the NEWLINE has been consumed prior!!
     fn block(&mut self) -> Result<Stmt, ParseError> {
         self.consume(
             &TT::Indent,
@@ -275,6 +284,8 @@ impl Parser {
         Ok(Stmt::Block(Block { scope, typed: None }))
     }
 
+    /// processes an if stmt
+    /// if expr : block [elif expr : block ]* [else : block]
     fn if_statement(&mut self) -> Result<Stmt, ParseError> {
         let condition = Box::new(self.expression()?);
 
@@ -323,6 +334,8 @@ impl Parser {
         }))
     }
 
+    /// return values from function blocks
+    /// return [expr]?
     fn return_statement(&mut self) -> Result<Stmt, ParseError> {
         let keyword = self.previous().clone();
         let value = if self.check(&TT::Newline) {
@@ -341,6 +354,8 @@ impl Parser {
         }))
     }
 
+    /// returns an expr as a statement
+    ///
     fn expression_statement(&mut self) -> Result<Stmt, ParseError> {
         let expr = self.expression()?;
         self.consume(&TT::Newline, "Expected newline after expr")?;
@@ -353,6 +368,8 @@ impl Parser {
         self.assignment()
     }
 
+    /// handles assignment expressions
+    /// [target =]+ expr
     fn assignment(&mut self) -> Result<Expr, ParseError> {
         let expr = self.cexpr()?;
 
@@ -391,6 +408,8 @@ impl Parser {
         Ok(expr)
     }
 
+    /// or exprs
+    /// expr or expr
     fn or(&mut self) -> Result<Expr, ParseError> {
         let mut expr = self.and()?;
 
@@ -408,6 +427,8 @@ impl Parser {
         Ok(expr)
     }
 
+    /// and expr
+    /// expr and expr
     fn and(&mut self) -> Result<Expr, ParseError> {
         let mut expr = self.equality()?;
 
@@ -425,6 +446,8 @@ impl Parser {
         Ok(expr)
     }
 
+    /// equality exprs
+    /// expr [ == | != | is ] expr
     fn equality(&mut self) -> Result<Expr, ParseError> {
         let mut expr = self.comparison()?;
 
@@ -446,6 +469,8 @@ impl Parser {
         Ok(expr)
     }
 
+    /// comparison exprs
+    /// expr [ < | > | <= | >= ] expr
     fn comparison(&mut self) -> Result<Expr, ParseError> {
         let mut expr = self.term()?;
 
@@ -468,6 +493,8 @@ impl Parser {
         Ok(expr)
     }
 
+    /// addition and subtraction exprs
+    /// expr [ + | - ] expr
     fn term(&mut self) -> Result<Expr, ParseError> {
         let mut expr = self.factor()?;
 
@@ -485,6 +512,8 @@ impl Parser {
         Ok(expr)
     }
 
+    /// multiplication and division exprs
+    /// expr [ * | // ] expr
     fn factor(&mut self) -> Result<Expr, ParseError> {
         let mut expr = self.modulo()?;
 
@@ -502,6 +531,8 @@ impl Parser {
         Ok(expr)
     }
 
+    /// modulo exprs
+    /// expr % expr
     fn modulo(&mut self) -> Result<Expr, ParseError> {
         let mut expr = self.unary()?;
 
@@ -519,6 +550,8 @@ impl Parser {
         Ok(expr)
     }
 
+    /// negation and inversion
+    /// [ not | - ] expr
     fn unary(&mut self) -> Result<Expr, ParseError> {
         if self.matches(&[TT::Operator(Op::Not), TT::Operator(Op::Subtract)]) {
             let operator = self.previous();
@@ -533,6 +566,8 @@ impl Parser {
         }
     }
 
+    /// index exprs
+    /// [ expr ]
     fn index(&mut self) -> Result<Expr, ParseError> {
         let mut expr = self.call()?;
 
@@ -551,6 +586,8 @@ impl Parser {
         Ok(expr)
     }
 
+    /// function invocation exprs
+    /// ID ( )
     fn call(&mut self) -> Result<Expr, ParseError> {
         let mut expr = self.target()?;
 
