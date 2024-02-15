@@ -137,6 +137,7 @@ impl TypeChecker {
     }
 }
 
+#[allow(dead_code, unused_variables)]
 impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChecker {
     fn visit_var(&mut self, x: &mut Var, state: Option<Vec<String>>) -> Result<Stmt, TypeError> {
         let assigned_type = self.get_identifier_type(&x.type_id)?;
@@ -153,12 +154,23 @@ impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChec
                 initializer_type = self.get_expr_type(x.initializer.as_ref().unwrap());
             }
 
-            if !self.match_type(
+            if self.match_type(
                 &assigned_type.clone().unwrap(),
                 &initializer_type.clone().unwrap(),
-            ) && (initializer_type != Some(Typed::Assigned(Type::None)))
-                && (initializer_type != Some(Typed::Assigned(Type::Empty)))
-            {
+            ) || self.match_type(
+                &initializer_type.clone().unwrap(),
+                &Typed::Assigned(Type::None),
+            ) || self.match_type(
+                &initializer_type.clone().unwrap(),
+                &Typed::Assigned(Type::Empty),
+            ) {
+                x.typed = assigned_type;
+                if !self.symbols.contains_key(&var_name.clone()) {
+                    self.symbols.insert(var_name, x.typed.clone().unwrap());
+                }
+                let res = x.clone();
+                Ok(Stmt::Var(res))
+            } else {
                 Err(TypeError::DeclMismatch {
                     help: format!(
                         "assigned type was {:#?} while initialized type was {:#?}",
@@ -166,13 +178,6 @@ impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChec
                     ),
                     span: x.name.span,
                 })
-            } else {
-                x.typed = assigned_type;
-                if !self.symbols.contains_key(&var_name.clone()) {
-                    self.symbols.insert(var_name, x.typed.clone().unwrap());
-                }
-                let res = x.clone();
-                Ok(Stmt::Var(res))
             }
         } else {
             x.typed = assigned_type;
@@ -240,7 +245,7 @@ impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChec
         let expr_res = self.check_expr(&mut x.expr, None)?;
         x.typed = self.get_expr_type(&expr_res);
 
-        let mut res = x.clone();
+        let res = x.clone();
         Ok(Stmt::Expression(res))
     }
 
@@ -293,6 +298,7 @@ impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChec
         } else {
             None
         };
+        let value_type = self.get_expr_type(&x.value.clone().unwrap());
 
         if x.value.is_some() {
             x.typed = self.get_expr_type(x.value.as_ref().unwrap());
@@ -309,14 +315,13 @@ impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChec
         x: &mut Print,
         state: Option<Vec<String>>,
     ) -> Result<Stmt, TypeError> {
-        let mut res = x.clone();
-
-        res.typed = Some(Typed::Assigned(Type::None));
-
+        x.typed = Some(Typed::Assigned(Type::None));
+        let res = x.clone();
         Ok(Stmt::Print(res))
     }
 }
 
+#[allow(dead_code, unused_variables)]
 impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChecker {
     fn visit_literal(
         &mut self,
@@ -361,7 +366,7 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
             Literal::False => Type::Bool,
             Literal::None => Type::None,
             Literal::Empty => Type::Empty,
-            Literal::Eol => Type::None,
+            // Literal::Eol => Type::None,
         };
 
         let res = x.clone();

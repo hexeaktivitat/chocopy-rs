@@ -122,19 +122,19 @@ impl Parser {
 
                 self.type_search = true;
 
-                let mut param_type = Token::new(TT::Identifier("".into()), name.span);
-                if self.peek().token == TT::Ctrl("[".into()) {
+                let param_type = if self.peek().token == TT::Ctrl("[".into()) {
                     self.consume(&TT::Ctrl("[".into()), "expected '[' for list type")?;
-                    param_type = self.consume(
+                    let ty = self.consume(
                         &|t: &Token| matches!(t.token, TT::Identifier(_)),
                         "expected type declaration",
                     )?;
                     self.consume(&TT::Ctrl("]".into()), "expected ']' after '['")?;
+                    ty
                 } else {
-                    param_type = self.consume(
+                    self.consume(
                         &|t: &Token| matches!(t.token, TT::Identifier(_)),
                         "expected type declaration",
-                    )?;
+                    )?
                 };
 
                 self.type_search = false;
@@ -214,19 +214,19 @@ impl Parser {
         )?;
 
         // need to revisit logic here
-        let mut type_id = Token::new(TT::Value(TLiteral::None), name.span);
-        if self.peek().token == TT::Ctrl("[".into()) {
+        let type_id = if self.peek().token == TT::Ctrl("[".into()) {
             self.consume(&TT::Ctrl("[".into()), "expected '[' after list decl")?;
-            type_id = self.consume(
+            let ty = self.consume(
                 &|t: &Token| matches!(t.token, TT::Identifier(_)),
                 "expected list identifier",
             )?;
             self.consume(&TT::Ctrl("]".into()), "expected ']' after list")?;
+            ty
         } else {
-            type_id = self.consume(
+            self.consume(
                 &|t: &Token| matches!(t.token, TT::Identifier(_)),
                 "expected type after declaration",
-            )?;
+            )?
         };
 
         let mut initializer = None;

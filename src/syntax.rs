@@ -47,7 +47,7 @@ pub enum Literal {
     False,
     None,
     Empty,
-    Eol,
+    // Eol,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -233,7 +233,7 @@ impl std::fmt::Display for Expr {
             Expr::Literal(Literal::False, _) => false.fmt(f),
             Expr::Literal(Literal::None, _) => f.write_str("None"),
             Expr::Literal(Literal::Empty, _) => f.write_str("Empty"),
-            Expr::Literal(Literal::Eol, _) => f.write_str("End of line"),
+            // Expr::Literal(Literal::Eol, _) => f.write_str("End of line"),
             Expr::Literal(Literal::True, _) => true.fmt(f),
             Expr::Literal(Literal::List(l), _) => f.write_fmt(format_args!("{:?}", l)),
             Expr::Logical(l) => f.write_fmt(format_args!("{} {} {}", l.left, l.operator, l.right)),
@@ -242,16 +242,18 @@ impl std::fmt::Display for Expr {
             Expr::Unary(Unary {
                 operator,
                 right,
-                typed,
+                typed: _,
             }) => f.write_fmt(format_args!("{}{}", operator, right)),
             Expr::Call(c) => c.callee.fmt(f),
             Expr::Binary(Binary {
                 left,
                 operator,
                 right,
-                typed,
+                typed: _,
             }) => f.write_fmt(format_args!("({} {} {})", left, operator, right)),
-            Expr::Grouping(Grouping { expr, typed }) => f.write_fmt(format_args!("({:?})", expr)),
+            Expr::Grouping(Grouping { expr, typed: _ }) => {
+                f.write_fmt(format_args!("({:?})", expr))
+            }
             Expr::Identifier(i) => f.write_fmt(format_args!("{}", i.name.token)),
             Expr::Index(i) => f.write_fmt(format_args!("{}", i.value)),
         }
