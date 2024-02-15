@@ -1,0 +1,526 @@
+
+TYPECHECK
+=========
+Func(
+    Func {
+        name: Token {
+            token: Identifier(
+                "is_zero",
+            ),
+            span: SourceSpan {
+                offset: SourceOffset(
+                    4,
+                ),
+                length: 7,
+            },
+        },
+        type_id: Some(
+            Token {
+                token: Identifier(
+                    "bool",
+                ),
+                span: SourceSpan {
+                    offset: SourceOffset(
+                        39,
+                    ),
+                    length: 4,
+                },
+            },
+        ),
+        parameters: [
+            Var(
+                Var {
+                    name: Token {
+                        token: Identifier(
+                            "items",
+                        ),
+                        span: SourceSpan {
+                            offset: SourceOffset(
+                                12,
+                            ),
+                            length: 5,
+                        },
+                    },
+                    type_id: Token {
+                        token: Identifier(
+                            "int",
+                        ),
+                        span: SourceSpan {
+                            offset: SourceOffset(
+                                20,
+                            ),
+                            length: 3,
+                        },
+                    },
+                    initializer: None,
+                    typed: Some(
+                        Assigned(
+                            Num,
+                        ),
+                    ),
+                },
+            ),
+            Var(
+                Var {
+                    name: Token {
+                        token: Identifier(
+                            "idx",
+                        ),
+                        span: SourceSpan {
+                            offset: SourceOffset(
+                                26,
+                            ),
+                            length: 3,
+                        },
+                    },
+                    type_id: Token {
+                        token: Identifier(
+                            "int",
+                        ),
+                        span: SourceSpan {
+                            offset: SourceOffset(
+                                31,
+                            ),
+                            length: 3,
+                        },
+                    },
+                    initializer: None,
+                    typed: Some(
+                        Assigned(
+                            Num,
+                        ),
+                    ),
+                },
+            ),
+        ],
+        body: Block(
+            Block {
+                scope: [
+                    Var(
+                        Var {
+                            name: Token {
+                                token: Identifier(
+                                    "val",
+                                ),
+                                span: SourceSpan {
+                                    offset: SourceOffset(
+                                        50,
+                                    ),
+                                    length: 3,
+                                },
+                            },
+                            type_id: Token {
+                                token: Identifier(
+                                    "int",
+                                ),
+                                span: SourceSpan {
+                                    offset: SourceOffset(
+                                        54,
+                                    ),
+                                    length: 3,
+                                },
+                            },
+                            initializer: Some(
+                                Literal(
+                                    Number(
+                                        0,
+                                    ),
+                                    Some(
+                                        Assigned(
+                                            Num,
+                                        ),
+                                    ),
+                                ),
+                            ),
+                            typed: Some(
+                                Assigned(
+                                    Num,
+                                ),
+                            ),
+                        },
+                    ),
+                    Expression(
+                        Expression {
+                            expr: Assign(
+                                Assign {
+                                    name: Token {
+                                        token: Identifier(
+                                            "val",
+                                        ),
+                                        span: SourceSpan {
+                                            offset: SourceOffset(
+                                                97,
+                                            ),
+                                            length: 3,
+                                        },
+                                    },
+                                    value: Index(
+                                        Index {
+                                            value: Variable(
+                                                Variable {
+                                                    name: Token {
+                                                        token: Identifier(
+                                                            "idx",
+                                                        ),
+                                                        span: SourceSpan {
+                                                            offset: SourceOffset(
+                                                                109,
+                                                            ),
+                                                            length: 3,
+                                                        },
+                                                    },
+                                                    typed: Some(
+                                                        Assigned(
+                                                            Num,
+                                                        ),
+                                                    ),
+                                                },
+                                            ),
+                                            typed: Some(
+                                                Assigned(
+                                                    Num,
+                                                ),
+                                            ),
+                                        },
+                                    ),
+                                    typed: Some(
+                                        Assigned(
+                                            Num,
+                                        ),
+                                    ),
+                                },
+                            ),
+                            typed: Some(
+                                Assigned(
+                                    Num,
+                                ),
+                            ),
+                        },
+                    ),
+                    Return(
+                        Return {
+                            keyword: Token {
+                                token: Keyword(
+                                    "return",
+                                ),
+                                span: SourceSpan {
+                                    offset: SourceOffset(
+                                        119,
+                                    ),
+                                    length: 6,
+                                },
+                            },
+                            value: Some(
+                                Logical(
+                                    Logical {
+                                        left: Variable(
+                                            Variable {
+                                                name: Token {
+                                                    token: Identifier(
+                                                        "val",
+                                                    ),
+                                                    span: SourceSpan {
+                                                        offset: SourceOffset(
+                                                            126,
+                                                        ),
+                                                        length: 3,
+                                                    },
+                                                },
+                                                typed: Some(
+                                                    Assigned(
+                                                        Num,
+                                                    ),
+                                                ),
+                                            },
+                                        ),
+                                        operator: Token {
+                                            token: Operator(
+                                                EqualEquals,
+                                            ),
+                                            span: SourceSpan {
+                                                offset: SourceOffset(
+                                                    130,
+                                                ),
+                                                length: 2,
+                                            },
+                                        },
+                                        right: Literal(
+                                            Number(
+                                                0,
+                                            ),
+                                            Some(
+                                                Assigned(
+                                                    Num,
+                                                ),
+                                            ),
+                                        ),
+                                        typed: Some(
+                                            Inferred(
+                                                Bool,
+                                            ),
+                                        ),
+                                    },
+                                ),
+                            ),
+                            typed: Some(
+                                Inferred(
+                                    Bool,
+                                ),
+                            ),
+                        },
+                    ),
+                ],
+                typed: Some(
+                    Inferred(
+                        Bool,
+                    ),
+                ),
+            },
+        ),
+        typed: Some(
+            Assigned(
+                Bool,
+            ),
+        ),
+    },
+)
+Var(
+    Var {
+        name: Token {
+            token: Identifier(
+                "mylist",
+            ),
+            span: SourceSpan {
+                offset: SourceOffset(
+                    138,
+                ),
+                length: 6,
+            },
+        },
+        type_id: Token {
+            token: Identifier(
+                "int",
+            ),
+            span: SourceSpan {
+                offset: SourceOffset(
+                    147,
+                ),
+                length: 3,
+            },
+        },
+        initializer: Some(
+            Literal(
+                None,
+                Some(
+                    Assigned(
+                        None,
+                    ),
+                ),
+            ),
+        ),
+        typed: Some(
+            Assigned(
+                Num,
+            ),
+        ),
+    },
+)
+Expression(
+    Expression {
+        expr: Assign(
+            Assign {
+                name: Token {
+                    token: Identifier(
+                        "mylist",
+                    ),
+                    span: SourceSpan {
+                        offset: SourceOffset(
+                            160,
+                        ),
+                        length: 6,
+                    },
+                },
+                value: Literal(
+                    List(
+                        [
+                            Literal(
+                                Number(
+                                    1,
+                                ),
+                                Some(
+                                    Assigned(
+                                        Num,
+                                    ),
+                                ),
+                            ),
+                            Literal(
+                                Number(
+                                    0,
+                                ),
+                                Some(
+                                    Assigned(
+                                        Num,
+                                    ),
+                                ),
+                            ),
+                            Literal(
+                                Number(
+                                    1,
+                                ),
+                                Some(
+                                    Assigned(
+                                        Num,
+                                    ),
+                                ),
+                            ),
+                        ],
+                    ),
+                    Some(
+                        Assigned(
+                            List(
+                                Num,
+                            ),
+                        ),
+                    ),
+                ),
+                typed: Some(
+                    Assigned(
+                        List(
+                            Num,
+                        ),
+                    ),
+                ),
+            },
+        ),
+        typed: Some(
+            Assigned(
+                List(
+                    Num,
+                ),
+            ),
+        ),
+    },
+)
+Expression(
+    Expression {
+        expr: Call(
+            Call {
+                callee: Variable(
+                    Variable {
+                        name: Token {
+                            token: Identifier(
+                                "print",
+                            ),
+                            span: SourceSpan {
+                                offset: SourceOffset(
+                                    178,
+                                ),
+                                length: 5,
+                            },
+                        },
+                        typed: Some(
+                            Inferred(
+                                None,
+                            ),
+                        ),
+                    },
+                ),
+                paren: Token {
+                    token: Ctrl(
+                        ")",
+                    ),
+                    span: SourceSpan {
+                        offset: SourceOffset(
+                            202,
+                        ),
+                        length: 1,
+                    },
+                },
+                args: [
+                    Call(
+                        Call {
+                            callee: Variable(
+                                Variable {
+                                    name: Token {
+                                        token: Identifier(
+                                            "is_zero",
+                                        ),
+                                        span: SourceSpan {
+                                            offset: SourceOffset(
+                                                184,
+                                            ),
+                                            length: 7,
+                                        },
+                                    },
+                                    typed: Some(
+                                        Assigned(
+                                            Bool,
+                                        ),
+                                    ),
+                                },
+                            ),
+                            paren: Token {
+                                token: Ctrl(
+                                    ")",
+                                ),
+                                span: SourceSpan {
+                                    offset: SourceOffset(
+                                        201,
+                                    ),
+                                    length: 1,
+                                },
+                            },
+                            args: [
+                                Variable(
+                                    Variable {
+                                        name: Token {
+                                            token: Identifier(
+                                                "mylist",
+                                            ),
+                                            span: SourceSpan {
+                                                offset: SourceOffset(
+                                                    192,
+                                                ),
+                                                length: 6,
+                                            },
+                                        },
+                                        typed: Some(
+                                            Assigned(
+                                                Num,
+                                            ),
+                                        ),
+                                    },
+                                ),
+                                Literal(
+                                    Number(
+                                        1,
+                                    ),
+                                    Some(
+                                        Assigned(
+                                            Num,
+                                        ),
+                                    ),
+                                ),
+                            ],
+                            typed: Some(
+                                Assigned(
+                                    Bool,
+                                ),
+                            ),
+                        },
+                    ),
+                ],
+                typed: Some(
+                    Inferred(
+                        None,
+                    ),
+                ),
+            },
+        ),
+        typed: Some(
+            Inferred(
+                None,
+            ),
+        ),
+    },
+)

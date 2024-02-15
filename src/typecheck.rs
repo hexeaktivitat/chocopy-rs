@@ -121,6 +121,20 @@ impl TypeChecker {
             _ => unreachable!(),
         }
     }
+
+    fn match_type(&self, a: &Typed, b: &Typed) -> bool {
+        let a_type = match a {
+            Typed::Assigned(t) => t,
+            Typed::Inferred(t) => t,
+        };
+
+        let b_type = match b {
+            Typed::Assigned(t) => t,
+            Typed::Inferred(t) => t,
+        };
+
+        a_type == b_type
+    }
 }
 
 impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChecker {
@@ -139,7 +153,7 @@ impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChec
                 initializer_type = self.get_expr_type(x.initializer.as_ref().unwrap());
             }
 
-            if !match_type(
+            if !self.match_type(
                 &assigned_type.clone().unwrap(),
                 &initializer_type.clone().unwrap(),
             ) && (initializer_type != Some(Typed::Assigned(Type::None)))
@@ -202,7 +216,7 @@ impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChec
         let block = self.check_stmt(&mut x.body, None)?;
         let block_type = self.get_stmt_type(&block).clone().unwrap();
 
-        if match_type(&assigned_type.clone().unwrap(), &block_type) {
+        if self.match_type(&assigned_type.clone().unwrap(), &block_type) {
             x.typed = assigned_type;
             self.symbols.insert(func_name, x.typed.clone().unwrap());
             let res = x.clone();
@@ -373,7 +387,7 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
         let right = self.check_expr(&mut x.right, None)?;
         let right_type = self.get_expr_type(&right).clone().unwrap();
 
-        if match_type(&right_type, &x.typed.clone().unwrap()) {
+        if self.match_type(&right_type, &x.typed.clone().unwrap()) {
             let res = x.clone();
             Ok(Expr::Unary(res))
         } else {
@@ -401,7 +415,7 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
         let right = self.check_expr(&mut x.right, None)?;
         let right_type = self.get_expr_type(&right);
 
-        if !match_type(&left_type.clone().unwrap(), &right_type.clone().unwrap())
+        if !self.match_type(&left_type.clone().unwrap(), &right_type.clone().unwrap())
             || !(x.typed == left_type)
             || !(x.typed == right_type)
         {
@@ -485,7 +499,7 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
         let right = self.check_expr(&mut x.right, None)?;
         let right_type = self.get_expr_type(&right).unwrap();
 
-        if match_type(&left_type, &right_type) {
+        if self.match_type(&left_type, &right_type) {
             x.right = Box::new(right);
             x.left = Box::new(left);
             x.typed = Some(Typed::Inferred(Type::Bool));
@@ -541,7 +555,7 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
 
         x.args = checked_args;
 
-        if match_type(&callee_type, &infr_type) {
+        if self.match_type(&callee_type, &infr_type) {
             x.typed = Some(callee_type);
             let res = x.clone();
             Ok(Expr::Call(res))
@@ -565,7 +579,7 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
         let expr_type = self.get_expr_type(&expr).unwrap();
         let infr_type = Typed::Inferred(Type::Num);
 
-        if match_type(&infr_type, &expr_type) {
+        if self.match_type(&infr_type, &expr_type) {
             x.typed = Some(expr_type);
             let res = x.clone();
             Ok(Expr::Index(res))
@@ -576,18 +590,4 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
             })
         }
     }
-}
-
-fn match_type(a: &Typed, b: &Typed) -> bool {
-    let a_type = match a {
-        Typed::Assigned(t) => t,
-        Typed::Inferred(t) => t,
-    };
-
-    let b_type = match b {
-        Typed::Assigned(t) => t,
-        Typed::Inferred(t) => t,
-    };
-
-    a_type == b_type
 }
