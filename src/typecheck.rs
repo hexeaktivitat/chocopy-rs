@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use miette::{Diagnostic, Result, SourceSpan};
 use thiserror::Error;
 
@@ -33,14 +35,14 @@ pub enum TypeError {
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeChecker {
     pub ast: Vec<Stmt>,
-    pub symbols: Vec<(String, Typed)>,
+    pub symbols: HashMap<String, Typed>,
 }
 
 impl TypeChecker {
     pub fn new(ast: &Vec<Stmt>) -> Self {
         Self {
             ast: ast.clone(),
-            symbols: vec![],
+            symbols: HashMap::new(),
         }
     }
 
@@ -137,8 +139,10 @@ impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChec
                 initializer_type = self.get_expr_type(x.initializer.as_ref().unwrap());
             }
 
-            if !(assigned_type == initializer_type)
-                && (initializer_type != Some(Typed::Assigned(Type::None)))
+            if !match_type(
+                &assigned_type.clone().unwrap(),
+                &initializer_type.clone().unwrap(),
+            ) && (initializer_type != Some(Typed::Assigned(Type::None)))
                 && (initializer_type != Some(Typed::Assigned(Type::Empty)))
             {
                 Err(TypeError::DeclMismatch {
@@ -150,18 +154,15 @@ impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChec
                 })
             } else {
                 x.typed = assigned_type;
-                if !self
-                    .symbols
-                    .contains(&(var_name.clone(), x.typed.clone().unwrap()))
-                {
-                    self.symbols.push((var_name, x.typed.clone().unwrap()));
+                if !self.symbols.contains_key(&var_name.clone()) {
+                    self.symbols.insert(var_name, x.typed.clone().unwrap());
                 }
                 let res = x.clone();
                 Ok(Stmt::Var(res))
             }
         } else {
             x.typed = assigned_type;
-            self.symbols.push((var_name, x.typed.clone().unwrap()));
+            self.symbols.insert(var_name, x.typed.clone().unwrap());
             let res = x.clone();
             Ok(Stmt::Var(res))
         }
@@ -191,7 +192,7 @@ impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChec
                         TT::Identifier(i) => i.clone(),
                         _ => unreachable!(),
                     };
-                    self.symbols.push((p_name, ptype.clone().unwrap()))
+                    self.symbols.insert(p_name, ptype.clone().unwrap());
                 }
                 _ => unreachable!(),
             }
@@ -199,9 +200,14 @@ impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChec
         }
 
         let block = self.check_stmt(&mut x.body, None)?;
-        let block_type = self.get_stmt_type(&block);
+        let block_type = self.get_stmt_type(&block).clone().unwrap();
 
-        if !(assigned_type == block_type) {
+        if match_type(&assigned_type.clone().unwrap(), &block_type) {
+            x.typed = assigned_type;
+            self.symbols.insert(func_name, x.typed.clone().unwrap());
+            let res = x.clone();
+            Ok(Stmt::Func(res))
+        } else {
             Err(TypeError::DeclMismatch {
                 help: format!(
                     "assigned type was {:#?} while initialized type was {:#?}",
@@ -209,11 +215,6 @@ impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChec
                 ),
                 span: x.name.span,
             })
-        } else {
-            x.typed = assigned_type;
-            self.symbols.push((func_name, x.typed.clone().unwrap()));
-            let res = x.clone();
-            Ok(Stmt::Func(res))
         }
     }
 
@@ -223,10 +224,9 @@ impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChec
         state: Option<Vec<String>>,
     ) -> Result<Stmt, TypeError> {
         let expr_res = self.check_expr(&mut x.expr, None)?;
+        x.typed = self.get_expr_type(&expr_res);
 
         let mut res = x.clone();
-
-        res.typed = self.get_expr_type(&expr_res);
         Ok(Stmt::Expression(res))
     }
 
@@ -297,7 +297,7 @@ impl StmtVisitor<Result<Stmt, TypeError>, Option<Vec<String>>> for &mut TypeChec
     ) -> Result<Stmt, TypeError> {
         let mut res = x.clone();
 
-        res.typed = Some(Typed::Assigned(Type::Empty));
+        res.typed = Some(Typed::Assigned(Type::None));
 
         Ok(Stmt::Print(res))
     }
@@ -370,8 +370,22 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
             _ => unreachable!(),
         };
 
-        let res = x.clone();
-        Ok(Expr::Unary(res))
+        let right = self.check_expr(&mut x.right, None)?;
+        let right_type = self.get_expr_type(&right).clone().unwrap();
+
+        if match_type(&right_type, &x.typed.clone().unwrap()) {
+            let res = x.clone();
+            Ok(Expr::Unary(res))
+        } else {
+            Err(TypeError::TypeMismatch {
+                help: format!(
+                    "expected {:?} found {:?}",
+                    x.typed.clone().unwrap(),
+                    right_type
+                ),
+                span: x.operator.span,
+            })
+        }
     }
 
     fn visit_binary(
@@ -387,7 +401,10 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
         let right = self.check_expr(&mut x.right, None)?;
         let right_type = self.get_expr_type(&right);
 
-        if !(left_type == right_type) || !(x.typed == left_type) || !(x.typed == right_type) {
+        if !match_type(&left_type.clone().unwrap(), &right_type.clone().unwrap())
+            || !(x.typed == left_type)
+            || !(x.typed == right_type)
+        {
             Err(TypeError::TypeMismatch {
                 help: "types dont match".into(),
                 span: x.operator.span,
@@ -463,12 +480,18 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
         x.typed = Some(Typed::Assigned(Type::Bool));
 
         let left = self.check_expr(&mut x.left, None)?;
-        let left_type = self.get_expr_type(&left);
+        let left_type = self.get_expr_type(&left).unwrap();
 
         let right = self.check_expr(&mut x.right, None)?;
-        let right_type = self.get_expr_type(&right);
+        let right_type = self.get_expr_type(&right).unwrap();
 
-        if !(left_type == right_type) {
+        if match_type(&left_type, &right_type) {
+            x.right = Box::new(right);
+            x.left = Box::new(left);
+            x.typed = Some(Typed::Inferred(Type::Bool));
+            let res = x.clone();
+            Ok(Expr::Logical(res))
+        } else {
             Err(TypeError::TypeMismatch {
                 help: format!(
                     "left type {:?} and right type {:?} do not match",
@@ -476,9 +499,6 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
                 ),
                 span: x.operator.span,
             })
-        } else {
-            let res = x.clone();
-            Ok(Expr::Logical(res))
         }
     }
 
@@ -495,8 +515,45 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
     }
 
     fn visit_call(&mut self, x: &mut Call, state: Option<Vec<String>>) -> Result<Expr, TypeError> {
-        let res = x.clone();
-        Ok(Expr::Call(res))
+        let callee_expr = self.check_expr(&mut x.callee, None)?;
+        let callee_type = self.get_expr_type(&callee_expr).unwrap();
+        let callee_name = match callee_expr {
+            Expr::Identifier(i) => i.name,
+            Expr::Variable(v) => v.name,
+            _ => unreachable!(),
+        };
+
+        let infr_type = if callee_name.token.to_string() == "print" {
+            Typed::Inferred(Type::None)
+        } else if self.symbols.contains_key(&callee_name.token.to_string()) {
+            self.symbols
+                .get(&callee_name.token.to_string())
+                .unwrap()
+                .clone()
+        } else {
+            Typed::Inferred(Type::None)
+        };
+
+        let mut checked_args = vec![];
+        for a in &mut x.args {
+            checked_args.push(self.check_expr(a, None)?);
+        }
+
+        x.args = checked_args;
+
+        if match_type(&callee_type, &infr_type) {
+            x.typed = Some(callee_type);
+            let res = x.clone();
+            Ok(Expr::Call(res))
+        } else {
+            Err(TypeError::TypeMismatch {
+                help: format!(
+                    "assigned type was {:#?} while initialized type was {:#?}",
+                    callee_type, infr_type
+                ),
+                span: callee_name.span,
+            })
+        }
     }
 
     fn visit_index(
@@ -504,9 +561,33 @@ impl ExprVisitor<Result<Expr, TypeError>, Option<Vec<String>>> for &mut TypeChec
         x: &mut Index,
         state: Option<Vec<String>>,
     ) -> Result<Expr, TypeError> {
-        x.typed = Some(Typed::Inferred(Type::Num));
+        let expr = self.check_expr(&mut x.value, None)?;
+        let expr_type = self.get_expr_type(&expr).unwrap();
+        let infr_type = Typed::Inferred(Type::Num);
 
-        let res = x.clone();
-        Ok(Expr::Index(res))
+        if match_type(&infr_type, &expr_type) {
+            x.typed = Some(expr_type);
+            let res = x.clone();
+            Ok(Expr::Index(res))
+        } else {
+            Err(TypeError::InvalidType {
+                help: format!("types {:?} and {:?} do not match", expr_type, x.typed),
+                span: (1, 1).into(),
+            })
+        }
     }
+}
+
+fn match_type(a: &Typed, b: &Typed) -> bool {
+    let a_type = match a {
+        Typed::Assigned(t) => t,
+        Typed::Inferred(t) => t,
+    };
+
+    let b_type = match b {
+        Typed::Assigned(t) => t,
+        Typed::Inferred(t) => t,
+    };
+
+    a_type == b_type
 }

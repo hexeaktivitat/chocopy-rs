@@ -357,10 +357,8 @@ impl Parser {
         let expr = self.cexpr()?;
 
         if self.matches(&[TT::Operator(Op::Equals)]) {
-            println!("prev: {:?}", self.previous());
             let _equals = self.previous();
             let value = self.assignment()?;
-            println!("value: {:?}", value);
             if let Expr::Variable(v) = expr {
                 let name = v.name;
                 Ok(Expr::Assign(Assign {
