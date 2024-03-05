@@ -8,6 +8,7 @@ use lexer::{LexError, Lexer};
 use parser::{ParseError, Parser};
 use typecheck::{TypeChecker, TypeError};
 
+mod assembler;
 mod lexer;
 mod parser;
 mod syntax;
